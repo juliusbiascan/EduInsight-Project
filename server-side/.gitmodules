@@ -1,0 +1,3 @@
+[submodule "react-qr-scanner"]
+	path = react-qr-scanner
+	url = https://github.com/yudielcurbelo/react-qr-scanner.git

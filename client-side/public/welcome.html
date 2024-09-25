@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to EduInsight</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: transparent
+    }
+
+    .welcome-container {
+      text-align: center;
+      padding: 40px;
+      background-color: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      max-width: 400px;
+      width: 100%;
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+      font-size: 2.5em;
+    }
+
+    p {
+      color: #34495e;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+
+    #userName {
+      font-weight: bold;
+      color: #3498db;
+    }
+
+    .logo {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="welcome-container">
+    <img src="./icon.ico" alt="EduInsight Logo" class="logo">
+    <h1>Welcome to EduInsight</h1>
+    <p>Hello, <span id="userName"></span>!</p>
+    <p>We're excited to have you on board. EduInsight is here to support your educational journey.</p>
+    <p>Let's get started on your path to success!</p>
+  </div>
+  <script>
+    const { ipcRenderer } = require('electron');
+    ipcRenderer.on('user-info', (event, { firstName, lastName }) => {
+      document.getElementById('userName').textContent = `${firstName} ${lastName}`;
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,42 @@
+services:
+  eduinsight:
+    container_name: nextjs
+    build: 
+      context: .
+    image: eduinsight:latest
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=mysql://eduinsight_user:eduinsight_pass@mysql:3306/eduinsight
+    env_file: .env
+    depends_on:
+      - mysql
+    
+  mysql:
+    image: mysql:latest
+    restart: always
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: eduinsight
+      MYSQL_USER: eduinsight_user
+      MYSQL_PASSWORD: eduinsight_pass
+      TZ: Asia/Manila
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+ 
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    restart: always    
+
+volumes:
+  mysql_data:
