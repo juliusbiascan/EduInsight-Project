@@ -1,6 +1,6 @@
 datasource db {
   provider = "mysql"
-  url      = "mysql://eduinsight_user:eduinsight_pass@localhost:3306/eduinsight"
+  url      = "mysql://eduinsight_user:eduinsight_pass@192.168.1.82:3306/eduinsight"
 }
 
 generator client {

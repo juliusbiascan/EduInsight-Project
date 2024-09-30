@@ -125,6 +125,19 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (selectedSubject) {
+      const fetchActiveUsers = async () => {
+        const subjectRecords = await api.database.getSubjectRecordsBySubjectId(selectedSubject.id);
+
+        setSubjectRecords(subjectRecords);
+        const activeUsers = await api.database.getActiveUsersBySubjectId(selectedSubject.id);
+        setActiveUsers(activeUsers);
+      };
+      fetchActiveUsers();
+    }
+  }, [selectedSubject]);
+
   // Add this new function to handle subject change
   const handleSubjectChange = async (value: string) => {
     const newSelectedSubject = subjects.find(s => s.id === value) || null;

@@ -79,7 +79,7 @@ export default function () {
 
   ipcMain.handle(IPCRoute.DATABASE_GET_ACTIVE_USERS_BY_SUBJECT_ID, async (e, subjectId: string) => {
     const subjectRecords = await db.subjectRecord.findMany({ where: { subjectId } });
-    return await db.activeDeviceUser.findMany({ where: { id: { in: subjectRecords.map(record => record.userId) } } });
+    return await db.activeDeviceUser.findMany({ where: { userId: { in: subjectRecords.map(record => record.userId) } } });
   });
 
   ipcMain.on(IPCRoute.DATABASE_USER_LOGOUT, async (e, userId: string, deviceId: string) => {
