@@ -1,0 +1,1 @@
+export { default as WindowManager } from './window-manager';
