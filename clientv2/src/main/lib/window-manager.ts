@@ -1,4 +1,4 @@
-import { BrowserWindow } from "electron";
+import { BrowserWindow, screen } from "electron";
 import url from "url";
 import path from "path";
 import { WindowIdentifier } from '../../shared/constants';
@@ -211,6 +211,23 @@ const WINDOW_CONFIGS: Record<string, WindowConfig> = {
       maximizable: false,
       alwaysOnTop: true,
       skipTaskbar: true,
+    },
+  },
+  [WindowIdentifier.QuizTeacher]: {
+    id: WindowIdentifier.QuizTeacher,
+    url: QUIZ_TEACHER_WINDOW_WEBPACK_ENTRY,
+    options: {
+      ...baseWindowConfig,
+      // show: true,
+      // frame: false,
+      // transparent: true,
+      // resizable: false,
+      // minimizable: false,
+      // maximizable: false,
+      // alwaysOnTop: true,
+      // skipTaskbar: true,
+      height: 700,
+      width: 650,
     },
   },
   [WindowIdentifier.Settings]: {

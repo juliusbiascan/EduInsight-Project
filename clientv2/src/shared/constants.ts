@@ -17,6 +17,7 @@ export enum WindowIdentifier {
   SomethingWentWrong = 'sww_window',
   Logout = 'logout_window',
   Splash = 'splash_window',
+  QuizTeacher = 'quiz_teacher_window',
 }
 
 /**
@@ -45,6 +46,7 @@ export enum IPCRoute {
   DATABASE_GET_STUDENT_SUBJECTS = '/database/get_student_subjects',
   DATABASE_GET_SUBJECT_DATA = '/database/get_subject_data',
   DATABASE_JOIN_SUBJECT = '/database/join_subject',
+  DATABASE_LEAVE_SUBJECT = '/database/leave_subject',
   DATABASE_DELETE_SUBJECT = '/database/delete_subject',
   DATABASE_USER_LOGOUT = '/database/user_logout',
   DATABASE_CREATE_SUBJECT = '/database/create_subject',
@@ -58,4 +60,5 @@ export enum IPCRoute {
   WINDOW_SEND = '/window/send',
   WINDOW_OPEN = '/window/open',
   WINDOW_HIDE = '/window/hide',
+
 }

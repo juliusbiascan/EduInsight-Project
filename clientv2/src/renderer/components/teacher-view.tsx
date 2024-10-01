@@ -16,6 +16,7 @@ import { Textarea } from "@/renderer/components/ui/textarea"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/renderer/components/ui/alert-dialog"
 import { Trash2 } from "lucide-react";
 import { generateSubjectCode } from "@/shared/utils";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/renderer/components/ui/card"
 
 interface TeacherViewProps {
   user: DeviceUser;
@@ -40,6 +41,7 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const closeDialogRef = useRef<() => void>(() => { });
+  const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchSubjects = async () => {
@@ -168,6 +170,19 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
           variant: "destructive",
         });
       }
+    }
+  };
+
+  const handleCreateAssignment = (type: 'quiz' | 'activity') => {
+    setIsAssignmentDialogOpen(false);
+    if (selectedSubject) {
+      api.window.open(WindowIdentifier.QuizTeacher);
+    } else {
+      toast({
+        title: "Error",
+        description: "Please select a subject before creating an assignment.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -372,13 +387,46 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
             <ul className="space-y-2">
               <li className="flex justify-between items-center">
                 <span>{selectedSubject?.name || 'No Subject'} Assignment</span>
-                <button
-                  className="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600"
-                  onClick={() => toast({ title: "Assignment Created", description: `You've created an assignment for ${selectedSubject?.name || 'No Subject'}` })}
-                  disabled={!selectedSubject}
-                >
-                  Create
-                </button>
+                <Dialog open={isAssignmentDialogOpen} onOpenChange={setIsAssignmentDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      className="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600"
+                      disabled={!selectedSubject}
+                    >
+                      Create
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>What would you like to create?</DialogTitle>
+                      <DialogDescription>
+                        Choose the type of assignment you want to create.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4 py-4">
+                      <Card className="cursor-pointer hover:bg-gray-100" onClick={() => handleCreateAssignment('quiz')}>
+                        <CardHeader>
+                          <CardTitle>Quiz</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <CardDescription>
+                            Make assessments and practice motivating with interactive questions
+                          </CardDescription>
+                        </CardContent>
+                      </Card>
+                      <Card className="cursor-pointer hover:bg-gray-100" onClick={() => handleCreateAssignment('activity')}>
+                        <CardHeader>
+                          <CardTitle>Activity</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <CardDescription>
+                            Add fun and interactive slides to assessments that students already love
+                          </CardDescription>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </li>
               <li className="flex justify-between items-center">
                 <span>Grade Assignments</span>

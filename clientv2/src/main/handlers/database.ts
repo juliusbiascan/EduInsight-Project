@@ -104,21 +104,25 @@ export default function () {
     return subjects;
   });
 
-  ipcMain.on(IPCRoute.DATABASE_JOIN_SUBJECT, async (e, subjectCode: string, studentId: string) => {
+  ipcMain.handle(IPCRoute.DATABASE_JOIN_SUBJECT, async (e, subjectCode: string, studentId: string, labId: string) => {
     const subject = await db.subject.findFirst({ where: { subjectCode } });
     if (!subject) {
       return { success: false, message: 'Subject not found' };
     }
-    const subjectRecord = await db.subjectRecord.create({
-      data: {
-        subjectId: subject.id,
-        userId: studentId,
-        labId: subject.labId
-      }
-    });
-    e.reply(IPCRoute.DATABASE_JOIN_SUBJECT, { success: true })
+    try {
+      await db.subjectRecord.create({
+        data: {
+          subjectId: subject.id,
+          userId: studentId,
+          labId: labId
+        }
+      });
+      return { success: true, message: 'Subject joined successfully' };
+    } catch (error) {
+      console.error('Error joining subject:', error);
+      return { success: false, message: 'Failed to join subject' };
+    }
   });
-
 
   ipcMain.on(IPCRoute.DATABASE_REGISTER_DEVICE, async (e, deviceName: string, labId: string, networkName: string) => {
     const ipAddress = getIPAddress()
@@ -133,5 +137,20 @@ export default function () {
       }
     })
     e.reply(IPCRoute.DATABASE_REGISTER_DEVICE, { success: true })
-  })
+  });
+
+  ipcMain.handle(IPCRoute.DATABASE_LEAVE_SUBJECT, async (e, subjectId: string, studentId: string) => {
+    try {
+      await db.subjectRecord.deleteMany({
+        where: {
+          subjectId: subjectId,
+          userId: studentId
+        }
+      });
+      return { success: true, message: 'Subject left successfully' };
+    } catch (error) {
+      console.error('Error leaving subject:', error);
+      return { success: false, message: 'Failed to leave subject' };
+    }
+  });
 }

@@ -1,4 +1,4 @@
-import { ActiveDeviceUser, ActiveUserLogs, DeviceUser, Subject } from "@prisma/client";
+import { DeviceUser, Subject } from "@prisma/client";
 import logo from "@/renderer/assets/smnhs_logo.png";
 import { useToast } from "../hooks/use-toast";
 import { WindowIdentifier } from "@/shared/constants";
@@ -9,6 +9,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
 
 interface StudentViewProps {
@@ -27,9 +28,12 @@ export const StudentView: React.FC<StudentViewProps> = ({
   const [selectedSubject, setSelectedSubject] = useState<string>('');
 
   const [subjectData, setSubjectData] = useState({
-    quizzes: [],
-    activities: [],
+    quizzes: [{ id: 1, name: "Quiz 1" }],
+    activities: [{ id: 1, name: "Activity 1" }],
   });
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLeavingSubject, setIsLeavingSubject] = useState(false);
 
   useEffect(() => {
     fetchSubjects();
@@ -57,10 +61,25 @@ export const StudentView: React.FC<StudentViewProps> = ({
     }
     setIsJoining(true);
     try {
-      await api.database.joinSubject(subjectCode, user.id, user.labId);
-      toast({ title: "Success", description: "Subject joined successfully" });
-      setSubjectCode('');
-      fetchSubjects(); // Refresh the subjects list
+      // First, check if the student has already joined this subject
+      const existingSubjects = await api.database.getStudentSubjects(user.id);
+      const alreadyJoined = existingSubjects.some(subject => subject.subjectCode === subjectCode);
+
+      if (alreadyJoined) {
+        toast({ title: "Info", description: "You have already joined this subject", variant: "default" });
+        setSubjectCode('');
+        setIsDialogOpen(false);
+      } else {
+        const result = await api.database.joinSubject(subjectCode, user.id, user.labId);
+        if (result.success) {
+          toast({ title: "Success", description: "Subject joined successfully" });
+          setSubjectCode('');
+          fetchSubjects(); // Refresh the subjects list
+          setIsDialogOpen(false); // Close the dialog
+        } else {
+          toast({ title: "Error", description: result.message || "Failed to join subject", variant: "destructive" });
+        }
+      }
     } catch (error) {
       console.error('Error joining subject:', error);
       toast({ title: "Error", description: "Failed to join subject", variant: "destructive" });
@@ -83,6 +102,30 @@ export const StudentView: React.FC<StudentViewProps> = ({
     } catch (error) {
       console.error('Error fetching subject data:', error);
       toast({ title: "Error", description: "Failed to load subject data", variant: "destructive" });
+    }
+  };
+
+  const handleLeaveSubject = async () => {
+    if (!selectedSubject) {
+      toast({ title: "Error", description: "Please select a subject to leave", variant: "destructive" });
+      return;
+    }
+    setIsLeavingSubject(true);
+    try {
+      // Replace this with your actual API call to leave the subject
+      const result = await api.database.leaveSubject(selectedSubject, user.id);
+      if (result.success) {
+        toast({ title: "Success", description: "Subject left successfully" });
+        setSelectedSubject('');
+        fetchSubjects(); // Refresh the subjects list
+      } else {
+        toast({ title: "Error", description: result.message || "Failed to leave subject", variant: "destructive" });
+      }
+    } catch (error) {
+      console.error('Error leaving subject:', error);
+      toast({ title: "Error", description: "Failed to leave subject", variant: "destructive" });
+    } finally {
+      setIsLeavingSubject(false);
     }
   };
 
@@ -129,6 +172,7 @@ export const StudentView: React.FC<StudentViewProps> = ({
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
+
           </button>
         </div>
       </header>
@@ -149,7 +193,7 @@ export const StudentView: React.FC<StudentViewProps> = ({
                 <p className="font-medium">10th</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">StudentID:</p>
+                <p className="text-sm text-gray-600">Student ID:</p>
                 <p className="font-medium">{user.schoolId}</p>
               </div>
               <div>
@@ -160,44 +204,67 @@ export const StudentView: React.FC<StudentViewProps> = ({
           </div>
 
           {/* Subject Picker */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-md font-semibold mb-3">Select Subject</h2>
+          <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
+            <h2 className="text-md font-semibold">Select Subject</h2>
             {subjects.length > 0 ? (
-              <Select onValueChange={handleSubjectChange} value={selectedSubject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id.toString()}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex-grow mx-4">
+                <Select onValueChange={handleSubjectChange} value={selectedSubject}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id.toString()}>
+                        {subject.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             ) : (
-              <p className="text-gray-500 mb-4">No subjects available. Please join a subject first.</p>
+              <p className="text-gray-500 flex-grow mx-4">No subjects available. Please join a subject first.</p>
             )}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="w-full mt-4">Join New Subject</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Join a Subject</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col space-y-4">
-                  <Input
-                    placeholder="Enter subject code"
-                    value={subjectCode}
-                    onChange={(e) => setSubjectCode(e.target.value)}
-                  />
-                  <Button onClick={handleJoinSubject} disabled={isJoining}>
-                    {isJoining ? 'Joining...' : 'Join Subject'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <div className="flex space-x-2">
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => setIsDialogOpen(true)}>Join New Subject</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Join a Subject</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex flex-col space-y-4">
+                    <Input
+                      placeholder="Enter subject code"
+                      value={subjectCode}
+                      onChange={(e) => setSubjectCode(e.target.value)}
+                    />
+                    <Button onClick={handleJoinSubject} disabled={isJoining}>
+                      {isJoining ? 'Joining...' : 'Join Subject'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" disabled={!selectedSubject}>Leave Subject</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. You will need to rejoin the subject if you want to access it again.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLeaveSubject} disabled={isLeavingSubject}>
+                      {isLeavingSubject ? 'Leaving...' : 'Leave Subject'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
 
           {/* Progress Overview */}

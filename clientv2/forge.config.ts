@@ -90,7 +90,16 @@ const config: ForgeConfig = {
             preload: {
               js: './src/renderer/lib/preload.ts',
             },
-          }
+          },
+          {
+            html: './src/renderer/assets/index.html',
+            js: './src/renderer/windows/teacher/create-quiz.tsx',
+            name: 'quiz_teacher_window',
+            preload: {
+              js: './src/renderer/lib/preload.ts',
+            },
+          },
+
         ],
       },
     }),

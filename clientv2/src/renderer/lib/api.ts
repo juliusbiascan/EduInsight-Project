@@ -41,7 +41,10 @@ export default {
     getSubjectData: (subjectId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_SUBJECT_DATA, subjectId) as Promise<Array<Subject>>,
     getSubjectRecordsBySubjectId: (subjectId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_SUBJECT_RECORDS_BY_SUBJECT_ID, subjectId) as Promise<Array<SubjectRecord>>,
     getActiveUsersBySubjectId: (subjectId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_ACTIVE_USERS_BY_SUBJECT_ID, subjectId) as Promise<Array<ActiveDeviceUser>>,
-    joinSubject: (subjectCode: string, studentId: string, labId: string) => ipcRenderer.send(IPCRoute.DATABASE_JOIN_SUBJECT, subjectCode, studentId, labId),
+    joinSubject: (subjectCode: string, studentId: string, labId: string) =>
+      ipcRenderer.invoke(IPCRoute.DATABASE_JOIN_SUBJECT, subjectCode, studentId, labId) as Promise<{ success: boolean, message: string }>,
+    leaveSubject: (subjectId: string, studentId: string) =>
+      ipcRenderer.invoke(IPCRoute.DATABASE_LEAVE_SUBJECT, subjectId, studentId) as Promise<{ success: boolean, message: string }>,
   },
   device: {
     getMacAddress: (callback: (event: IpcRendererEvent, macAddress: string) => void) => ipcRenderer.on('SET_MAC', callback),
