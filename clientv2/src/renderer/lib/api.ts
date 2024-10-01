@@ -1,4 +1,4 @@
-import { ActiveDeviceUser, ActiveUserLogs, Device, DeviceUser, Labaratory, Subject, SubjectRecord } from '@prisma/client';
+import { ActiveDeviceUser, ActiveUserLogs, Device, DeviceUser, Labaratory, Quiz, QuizQuestion, Subject, SubjectRecord } from '@prisma/client';
 import { IPCRoute } from '../../shared/constants';
 import { ipcRenderer, IpcRendererEvent } from 'electron';
 import type AppInfo from 'package.json';
@@ -41,10 +41,16 @@ export default {
     getSubjectData: (subjectId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_SUBJECT_DATA, subjectId) as Promise<Array<Subject>>,
     getSubjectRecordsBySubjectId: (subjectId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_SUBJECT_RECORDS_BY_SUBJECT_ID, subjectId) as Promise<Array<SubjectRecord>>,
     getActiveUsersBySubjectId: (subjectId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_ACTIVE_USERS_BY_SUBJECT_ID, subjectId) as Promise<Array<ActiveDeviceUser>>,
+    getQuizzesByUserId: (userId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_QUIZZES_BY_USER_ID, userId) as Promise<Array<Quiz & { questions: Array<QuizQuestion> }>>,
+    getQuizById: (quizId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_QUIZ_BY_ID, quizId) as Promise<Array<Quiz & { questions: Array<QuizQuestion> }>>,
+    deleteQuiz: (quizId: string) => ipcRenderer.send(IPCRoute.DATABASE_DELETE_QUIZ, quizId),
+    createQuiz: (quiz: Omit<Quiz, 'id' | 'createdAt' | 'updatedAt'>) =>
+      ipcRenderer.invoke(IPCRoute.DATABASE_CREATE_QUIZ, quiz) as Promise<Quiz>,
     joinSubject: (subjectCode: string, studentId: string, labId: string) =>
       ipcRenderer.invoke(IPCRoute.DATABASE_JOIN_SUBJECT, subjectCode, studentId, labId) as Promise<{ success: boolean, message: string }>,
     leaveSubject: (subjectId: string, studentId: string) =>
       ipcRenderer.invoke(IPCRoute.DATABASE_LEAVE_SUBJECT, subjectId, studentId) as Promise<{ success: boolean, message: string }>,
+
   },
   device: {
     getMacAddress: (callback: (event: IpcRendererEvent, macAddress: string) => void) => ipcRenderer.on('SET_MAC', callback),

@@ -3,7 +3,6 @@ import url from "url";
 import path from "path";
 import { WindowIdentifier } from '../../shared/constants';
 
-
 export const createWelcomeWindow = (firstName: string, lastName: string) => {
   let welcomeWindow = new BrowserWindow({
     width: 500,
@@ -218,16 +217,16 @@ const WINDOW_CONFIGS: Record<string, WindowConfig> = {
     url: QUIZ_TEACHER_WINDOW_WEBPACK_ENTRY,
     options: {
       ...baseWindowConfig,
-      // show: true,
-      // frame: false,
-      // transparent: true,
-      // resizable: false,
-      // minimizable: false,
-      // maximizable: false,
-      // alwaysOnTop: true,
-      // skipTaskbar: true,
+      show: true,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
       height: 700,
-      width: 650,
+      width: 1080,
     },
   },
   [WindowIdentifier.Settings]: {

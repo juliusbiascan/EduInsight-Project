@@ -1,20 +1,15 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Save, Trash2 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/renderer/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/renderer/components/ui/toggle-group";
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/renderer/components/ui/tooltip";
-import { Button } from '@/renderer/components/ui/button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/renderer/components/ui/tabs";
-import { questionTypes } from './quiz-create'; // Import the questionTypes array
+import { LeftOutlined, SaveOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Layout, Button, Select, Radio, Checkbox, Input, Space, Typography, Tabs, Tooltip, Card } from 'antd';
+import { questionTypes } from '@/renderer/types/quiz';
 
-const QuizQuestions = () => {
+const { Header, Content } = Layout;
+const { Option } = Select;
+const { TextArea } = Input;
+const { Title } = Typography;
+
+const QuizQuestions: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [questionType, setQuestionType] = useState(location.state?.questionType || questionTypes[0]);
@@ -77,176 +72,137 @@ const QuizQuestions = () => {
     switch (questionType.label) {
       case "Multiple Choice":
         return (
-          <>
-            <textarea
-              className="w-full h-32 p-2 bg-purple-800 text-white rounded mb-4"
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <TextArea
+              rows={4}
               placeholder="Type question here"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
+              style={{ marginBottom: '16px' }}
             />
-            {/* Existing answer options code */}
-            <Tabs value={answerType} onValueChange={setAnswerType} className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="single">Single correct answer</TabsTrigger>
-                <TabsTrigger value="multiple">Multiple correct answers</TabsTrigger>
-              </TabsList>
-              <TabsContent value="single" className="space-y-2">
-                {answerOptions.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      checked={option.isCorrect}
-                      onChange={() => handleCorrectAnswerChange(option.id)}
-                      className="w-4 h-4"
-                    />
-                    <input
-                      type="text"
-                      value={option.text}
-                      onChange={(e) => handleAnswerOptionChange(option.id, e.target.value)}
-                      placeholder={`Option ${option.id}`}
-                      className="flex-grow p-2 bg-purple-800 text-white rounded"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteAnswerOption(option.id)}
-                      disabled={answerOptions.length <= 2}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </TabsContent>
-              <TabsContent value="multiple" className="space-y-2">
-                {answerOptions.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={option.isCorrect}
-                      onChange={() => handleCorrectAnswerChange(option.id)}
-                      className="w-4 h-4"
-                    />
-                    <input
-                      type="text"
-                      value={option.text}
-                      onChange={(e) => handleAnswerOptionChange(option.id, e.target.value)}
-                      placeholder={`Option ${option.id}`}
-                      className="flex-grow p-2 bg-purple-800 text-white rounded"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteAnswerOption(option.id)}
-                      disabled={answerOptions.length <= 2}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </TabsContent>
+            <Tabs activeKey={answerType} onChange={setAnswerType}>
+              <Tabs.TabPane tab="Single correct answer" key="single">
+                <Radio.Group style={{ width: '100%' }}>
+                  {answerOptions.map((option) => (
+                    <Card key={option.id} style={{ marginBottom: '8px' }}>
+                      <Space>
+                        <Radio
+                          checked={option.isCorrect}
+                          onChange={() => handleCorrectAnswerChange(option.id)}
+                        />
+                        <Input
+                          value={option.text}
+                          onChange={(e) => handleAnswerOptionChange(option.id, e.target.value)}
+                          placeholder={`Option ${option.id}`}
+                          style={{ width: '300px' }}
+                        />
+                        <Button
+                          icon={<DeleteOutlined />}
+                          onClick={() => deleteAnswerOption(option.id)}
+                          disabled={answerOptions.length <= 2}
+                        />
+                      </Space>
+                    </Card>
+                  ))}
+                </Radio.Group>
+              </Tabs.TabPane>
+              <Tabs.TabPane tab="Multiple correct answers" key="multiple">
+                <Checkbox.Group style={{ width: '100%' }}>
+                  {answerOptions.map((option) => (
+                    <Card key={option.id} style={{ marginBottom: '8px' }}>
+                      <Space>
+                        <Checkbox
+                          checked={option.isCorrect}
+                          onChange={() => handleCorrectAnswerChange(option.id)}
+                        />
+                        <Input
+                          value={option.text}
+                          onChange={(e) => handleAnswerOptionChange(option.id, e.target.value)}
+                          placeholder={`Option ${option.id}`}
+                          style={{ width: '300px' }}
+                        />
+                        <Button
+                          icon={<DeleteOutlined />}
+                          onClick={() => deleteAnswerOption(option.id)}
+                          disabled={answerOptions.length <= 2}
+                        />
+                      </Space>
+                    </Card>
+                  ))}
+                </Checkbox.Group>
+              </Tabs.TabPane>
             </Tabs>
-            <Button onClick={addAnswerOption} className="mt-4">
+            <Button icon={<PlusOutlined />} onClick={addAnswerOption} style={{ marginTop: '16px' }}>
               Add another option
             </Button>
-          </>
+          </Space>
         );
       default:
         return (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-white text-2xl">This question type is under development.</p>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <Title level={3}>This question type is under development.</Title>
           </div>
         );
     }
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      <header className="flex items-center justify-between p-4 bg-background border-b">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+    <Layout style={{ minHeight: '100vh' }}>
+      <Header style={{ background: '#fff', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+        <Space>
+          <Button icon={<LeftOutlined />} onClick={() => navigate(-1)} />
           <Select
             value={questionType.label}
-            onValueChange={(value) => setQuestionType(questionTypes.find(type => type.label === value) || questionTypes[0])}
+            style={{ width: 180 }}
+            onChange={(value) => setQuestionType(questionTypes.find(type => type.label === value) || questionTypes[0])}
           >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Question type" />
-            </SelectTrigger>
-            <SelectContent>
-              {questionTypes.map((type) => (
-                <SelectItem key={type.label} value={type.label}>
-                  {type.icon} {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
+            {questionTypes.map((type) => (
+              <Option key={type.label} value={type.label}>
+                {type.icon} {type.label}
+              </Option>
+            ))}
           </Select>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <Select value={points.toString()} onValueChange={(value) => setPoints(parseInt(value))}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Points" />
-            </SelectTrigger>
-            <SelectContent>
-              {[1, 2, 3].map((value) => (
-                <SelectItem key={value} value={value.toString()}>{value} point{value > 1 ? 's' : ''}</SelectItem>
-              ))}
-            </SelectContent>
+        </Space>
+        <Space>
+          <Select value={points.toString()} style={{ width: 120 }} onChange={(value) => setPoints(parseInt(value))}>
+            {[1, 2, 3].map((value) => (
+              <Option key={value} value={value.toString()}>{value} point{value > 1 ? 's' : ''}</Option>
+            ))}
           </Select>
-          <Select value={timeLimit.toString()} onValueChange={(value) => setTimeLimit(parseInt(value))}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Time limit" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30">30 seconds</SelectItem>
-              <SelectItem value="60">1 minute</SelectItem>
-              <SelectItem value="120">2 minutes</SelectItem>
-            </SelectContent>
+          <Select value={timeLimit.toString()} style={{ width: 140 }} onChange={(value) => setTimeLimit(parseInt(value))}>
+            <Option value="30">30 seconds</Option>
+            <Option value="60">1 minute</Option>
+            <Option value="120">2 minutes</Option>
           </Select>
-          <Button variant="secondary" onClick={handleSaveQuestion}>
-            <Save className="mr-2 h-4 w-4" />
+          <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveQuestion}>
             Save question
           </Button>
-        </div>
-      </header>
-
-      <div className="border-b p-4">
-        <TooltipProvider>
-          <div className="flex items-center space-x-2">
-            <ToggleGroup type="multiple" variant="outline">
+        </Space>
+      </Header>
+      <Content style={{ padding: '24px', backgroundColor: '#f0f2f5' }}>
+        <Card>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Space wrap style={{ marginBottom: '16px' }}>
               {['A', 'B', 'I', 'U', 'S'].map((item) => (
-                <Tooltip key={item}>
-                  <TooltipTrigger asChild>
-                    <ToggleGroupItem value={item.toLowerCase()} aria-label={getTooltipLabel(item)}>
-                      {item}
-                    </ToggleGroupItem>
-                  </TooltipTrigger>
-                  <TooltipContent>{getTooltipLabel(item)}</TooltipContent>
+                <Tooltip key={item} title={getTooltipLabel(item)}>
+                  <Button>{item}</Button>
                 </Tooltip>
               ))}
-            </ToggleGroup>
-            {['superscript', 'subscript', 'equation'].map((type) => (
-              <Tooltip key={type}>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon">
+              {['superscript', 'subscript', 'equation'].map((type) => (
+                <Tooltip key={type} title={getTooltipLabel(type)}>
+                  <Button>
                     {type === 'superscript' && <span>X<sup>2</sup></span>}
                     {type === 'subscript' && <span>X<sub>2</sub></span>}
                     {type === 'equation' && <span>Σ</span>}
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>{getTooltipLabel(type)}</TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
-        </TooltipProvider>
-      </div>
-
-      {/* Question input area */}
-      <div className="flex-grow p-4 bg-purple-900 overflow-y-auto">
-        {renderQuestionContent()}
-      </div>
-    </div>
+                </Tooltip>
+              ))}
+            </Space>
+            {renderQuestionContent()}
+          </Space>
+        </Card>
+      </Content>
+    </Layout>
   );
 };
 

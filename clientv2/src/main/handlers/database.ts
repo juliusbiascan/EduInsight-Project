@@ -4,7 +4,7 @@ import { db } from '@/shared/db';
 import { machineIdSync } from 'node-machine-id';
 import { getIPAddress, getNetworkNames } from '../lib/ipaddress';
 import { v4 as uuidv4 } from 'uuid';
-import { Subject } from '@prisma/client';
+import { Quiz, Subject } from '@prisma/client';
 
 export default function () {
 
@@ -152,5 +152,34 @@ export default function () {
       console.error('Error leaving subject:', error);
       return { success: false, message: 'Failed to leave subject' };
     }
+  });
+
+  ipcMain.handle(IPCRoute.DATABASE_GET_QUIZZES_BY_USER_ID, async (e, userId: string) => {
+    return await db.quiz.findMany({
+      where: { userId },
+      include: {
+        questions: true
+      }
+    });
+  });
+
+  ipcMain.on(IPCRoute.DATABASE_DELETE_QUIZ, async (e, quizId: string) => {
+    await db.quiz.delete({
+      where: { id: quizId },
+      include: { questions: true }
+    });
+  });
+
+  ipcMain.handle(IPCRoute.DATABASE_CREATE_QUIZ, async (e, quiz: Omit<Quiz, 'id' | 'createdAt' | 'updatedAt'>) => {
+    return await db.quiz.create({
+      data: quiz
+    });
+  });
+
+  ipcMain.handle(IPCRoute.DATABASE_GET_QUIZ_BY_ID, async (e, quizId: string) => {
+    return await db.quiz.findMany({
+      where: { id: quizId },
+      include: { questions: true }
+    });
   });
 }

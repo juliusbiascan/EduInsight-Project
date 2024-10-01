@@ -187,38 +187,30 @@ model SubjectRecord {
   updatedAt DateTime @updatedAt
 }
 
-model Assignment {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model QuizQuestion {
+  id        String   @id @default(uuid())
+  quizId    String
+  question  String
+  answer    String
+  type      String
+  time      Int
+  points    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
 }
 
 model Quiz {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model QuizQuestion {
-  id            String   @id @default(uuid())
-  quizId        String
-  question      String
-  options       Json
-  correctAnswer String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model QuizSubmission {
-  id        String   @id @default(uuid())
-  quizId    String
-  userId    String
-  answers   Json
-  score     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String         @id @default(uuid())
+  userId     String
+  title      String
+  grade      String
+  subject    String
+  author     String
+  image      String
+  visibility String
+  published  Boolean        @default(false)
+  questions  QuizQuestion[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 }
