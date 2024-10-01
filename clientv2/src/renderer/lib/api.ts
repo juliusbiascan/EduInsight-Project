@@ -46,6 +46,8 @@ export default {
     deleteQuiz: (quizId: string) => ipcRenderer.send(IPCRoute.DATABASE_DELETE_QUIZ, quizId),
     createQuiz: (quiz: Omit<Quiz, 'id' | 'createdAt' | 'updatedAt'>) =>
       ipcRenderer.invoke(IPCRoute.DATABASE_CREATE_QUIZ, quiz) as Promise<Quiz>,
+    createQuizQuestionByQuizId: (quizId: string, question: Omit<QuizQuestion, 'id' | 'createdAt' | 'updatedAt'>) =>
+      ipcRenderer.invoke(IPCRoute.DATABASE_CREATE_QUIZ_QUESTION, quizId, question) as Promise<QuizQuestion>,
     joinSubject: (subjectCode: string, studentId: string, labId: string) =>
       ipcRenderer.invoke(IPCRoute.DATABASE_JOIN_SUBJECT, subjectCode, studentId, labId) as Promise<{ success: boolean, message: string }>,
     leaveSubject: (subjectId: string, studentId: string) =>

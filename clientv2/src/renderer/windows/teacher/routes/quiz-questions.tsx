@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LeftOutlined, SaveOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Layout, Button, Select, Radio, Checkbox, Input, Space, Typography, Tabs, Tooltip, Card } from 'antd';
+import { Layout, Button, Select, Radio, Checkbox, Input, Space, Typography, Tabs, Tooltip, Card, message } from 'antd';
 import { questionTypes } from '@/renderer/types/quiz';
 
 const { Header, Content } = Layout;
@@ -12,6 +12,7 @@ const { Title } = Typography;
 const QuizQuestions: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { quizId } = location.state;
   const [questionType, setQuestionType] = useState(location.state?.questionType || questionTypes[0]);
   const [timeLimit, setTimeLimit] = useState(30);
   const [points, setPoints] = useState(1);
@@ -55,17 +56,48 @@ const QuizQuestions: React.FC = () => {
     setAnswerOptions(options => options.filter(option => option.id !== id));
   };
 
-  const handleSaveQuestion = () => {
+  const handleSaveQuestion = async () => {
+    // Validate the question data
+    if (!question.trim()) {
+      message.error('Please enter a question');
+      return;
+    }
+
+    if (answerOptions.filter(option => option.text.trim()).length < 2) {
+      message.error('Please provide at least two answer options');
+      return;
+    }
+
+    if (!answerOptions.some(option => option.isCorrect)) {
+      message.error('Please select at least one correct answer');
+      return;
+    }
+
     const questionData = {
-      questionType: questionType.label,
+      quizId,
+      question: question.trim(),
+      options: JSON.stringify(answerOptions.map(({ id, text, isCorrect }) => ({
+        id,
+        text: text.trim(),
+        isCorrect,
+      })).filter(option => option.text)),
+      type: questionType.label,
+      time: timeLimit,
       points,
-      timeLimit,
-      answerType,
-      question,
-      options: answerOptions,
     };
 
-    navigate('/quiz-manager', { state: { newQuestion: questionData } });
+    try {
+      const response = await api.database.createQuizQuestionByQuizId(quizId, questionData);
+      if (response) {
+        navigate('/quiz-manager', { state: { quizId } });
+        message.success('Question saved successfully');
+      } else {
+        message.error('Failed to save question');
+      }
+    } catch (error) {
+      console.error('Error saving question:', error);
+      message.error('An error occurred while saving the question');
+    }
   };
 
   const renderQuestionContent = () => {
@@ -82,14 +114,15 @@ const QuizQuestions: React.FC = () => {
             />
             <Tabs activeKey={answerType} onChange={setAnswerType}>
               <Tabs.TabPane tab="Single correct answer" key="single">
-                <Radio.Group style={{ width: '100%' }}>
+                <Radio.Group
+                  style={{ width: '100%' }}
+                  value={answerOptions.find(option => option.isCorrect)?.id}
+                  onChange={(e) => handleCorrectAnswerChange(e.target.value)}
+                >
                   {answerOptions.map((option) => (
                     <Card key={option.id} style={{ marginBottom: '8px' }}>
                       <Space>
-                        <Radio
-                          checked={option.isCorrect}
-                          onChange={() => handleCorrectAnswerChange(option.id)}
-                        />
+                        <Radio value={option.id} />
                         <Input
                           value={option.text}
                           onChange={(e) => handleAnswerOptionChange(option.id, e.target.value)}
@@ -107,29 +140,27 @@ const QuizQuestions: React.FC = () => {
                 </Radio.Group>
               </Tabs.TabPane>
               <Tabs.TabPane tab="Multiple correct answers" key="multiple">
-                <Checkbox.Group style={{ width: '100%' }}>
-                  {answerOptions.map((option) => (
-                    <Card key={option.id} style={{ marginBottom: '8px' }}>
-                      <Space>
-                        <Checkbox
-                          checked={option.isCorrect}
-                          onChange={() => handleCorrectAnswerChange(option.id)}
-                        />
-                        <Input
-                          value={option.text}
-                          onChange={(e) => handleAnswerOptionChange(option.id, e.target.value)}
-                          placeholder={`Option ${option.id}`}
-                          style={{ width: '300px' }}
-                        />
-                        <Button
-                          icon={<DeleteOutlined />}
-                          onClick={() => deleteAnswerOption(option.id)}
-                          disabled={answerOptions.length <= 2}
-                        />
-                      </Space>
-                    </Card>
-                  ))}
-                </Checkbox.Group>
+                {answerOptions.map((option) => (
+                  <Card key={option.id} style={{ marginBottom: '8px' }}>
+                    <Space>
+                      <Checkbox
+                        checked={option.isCorrect}
+                        onChange={() => handleCorrectAnswerChange(option.id)}
+                      />
+                      <Input
+                        value={option.text}
+                        onChange={(e) => handleAnswerOptionChange(option.id, e.target.value)}
+                        placeholder={`Option ${option.id}`}
+                        style={{ width: '300px' }}
+                      />
+                      <Button
+                        icon={<DeleteOutlined />}
+                        onClick={() => deleteAnswerOption(option.id)}
+                        disabled={answerOptions.length <= 2}
+                      />
+                    </Space>
+                  </Card>
+                ))}
               </Tabs.TabPane>
             </Tabs>
             <Button icon={<PlusOutlined />} onClick={addAnswerOption} style={{ marginTop: '16px' }}>

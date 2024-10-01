@@ -4,7 +4,7 @@ import { db } from '@/shared/db';
 import { machineIdSync } from 'node-machine-id';
 import { getIPAddress, getNetworkNames } from '../lib/ipaddress';
 import { v4 as uuidv4 } from 'uuid';
-import { Quiz, Subject } from '@prisma/client';
+import { Quiz, QuizQuestion, Subject } from '@prisma/client';
 
 export default function () {
 
@@ -181,5 +181,20 @@ export default function () {
       where: { id: quizId },
       include: { questions: true }
     });
+  });
+
+  ipcMain.handle(IPCRoute.DATABASE_CREATE_QUIZ_QUESTION, async (e, quizId: string, question: Omit<QuizQuestion, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const createdQuestion = await db.quizQuestion.create({
+        data: {
+          ...question,
+          quizId
+        }
+      });
+      return createdQuestion;
+    } catch (error) {
+      console.error('Error creating quiz question:', error);
+      return null;
+    }
   });
 }

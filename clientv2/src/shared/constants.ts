@@ -54,6 +54,7 @@ export enum IPCRoute {
   DATABASE_GET_QUIZ_BY_ID = '/database/get_quiz_by_id',
   DATABASE_DELETE_QUIZ = '/database/delete_quiz',
   DATABASE_CREATE_QUIZ = '/database/create_quiz',
+  DATABASE_CREATE_QUIZ_QUESTION = '/database/create_quiz_question',
   UPDATER_CHECKING = '/updater/checking',
   UPDATER_DOWNLOADING = '/updater/downloading',
   UPDATER_FINISHED = '/updater/finished',

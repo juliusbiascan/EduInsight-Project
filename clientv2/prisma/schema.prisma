@@ -191,7 +191,7 @@ model QuizQuestion {
   id        String   @id @default(uuid())
   quizId    String
   question  String
-  answer    String
+  options   Json
   type      String
   time      Int
   points    Int

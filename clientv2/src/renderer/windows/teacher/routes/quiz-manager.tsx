@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button, Input, Card, Collapse, Layout, Typography, Space, List, Divider, Modal, Select, Upload, Empty } from 'antd';
-import { LeftOutlined, SearchOutlined, PlusOutlined, SettingOutlined, EyeOutlined } from '@ant-design/icons';
+import { LeftOutlined, SearchOutlined, PlusOutlined, SettingOutlined, EyeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { Quiz, QuizQuestion } from '@prisma/client';
 import { questionTypes, QuestionType } from '@/renderer/types/quiz';
 
@@ -17,6 +17,8 @@ const QuizManager: React.FC = () => {
   const [quiz, setQuiz] = useState<(Quiz & { questions: QuizQuestion[] }) | null>(null);
   const [quizSettings, setQuizSettings] = useState<Partial<Quiz>>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const location = useLocation();
+  const [publishModalVisible, setPublishModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchQuiz = async () => {
@@ -27,7 +29,7 @@ const QuizManager: React.FC = () => {
       }
     };
     fetchQuiz();
-  }, [quizId]);
+  }, [quizId, location.state]);
 
   const handleSettingChange = (key: string, value: string) => {
     setQuizSettings(prev => ({ ...prev, [key]: value }));
@@ -56,7 +58,7 @@ const QuizManager: React.FC = () => {
   const handleQuestionTypeClick = (questionType: QuestionType) => {
     // Navigate to question creation page or handle question creation logic
     console.log('Creating question of type:', questionType.label);
-    navigate('/quiz-questions', { state: { questionType, quizSettings } });
+    navigate('/quiz-questions', { state: { questionType, quizSettings, quizId } });
   };
 
   const renderQuestionTypes = (category: string) => {
@@ -78,6 +80,43 @@ const QuizManager: React.FC = () => {
     ));
   };
 
+  const handlePublish = () => {
+    if (!quizSettings.grade || !quizSettings.visibility || !quizSettings.subject) {
+      Modal.error({
+        title: 'Incomplete Quiz Settings',
+        content: 'Please ensure you have set the grade, visibility, and subject for this quiz before publishing.',
+      });
+      return;
+    }
+
+    if (!quiz?.questions || quiz.questions.length === 0) {
+      Modal.error({
+        title: 'No Questions Added',
+        content: 'Please add at least one question to the quiz before publishing.',
+      });
+      return;
+    }
+
+    setPublishModalVisible(true);
+  };
+
+  const confirmPublish = async () => {
+    try {
+      // Implement the actual publish logic here
+      // await api.database.publishQuiz(quizId);
+      Modal.success({
+        title: 'Quiz Published',
+        content: 'Your quiz has been successfully published!',
+      });
+      setPublishModalVisible(false);
+    } catch (error) {
+      Modal.error({
+        title: 'Publish Failed',
+        content: 'An error occurred while publishing the quiz. Please try again.',
+      });
+    }
+  };
+
   return (
     <>
       <Layout style={{ minHeight: '100vh' }}>
@@ -89,8 +128,8 @@ const QuizManager: React.FC = () => {
             </Space>
             <Space>
               <Button icon={<SettingOutlined />} onClick={showSettings}>Settings</Button>
-              <Button icon={<EyeOutlined />}>Preview</Button>
-              <Button type="primary">Publish</Button>
+              <Button icon={<EyeOutlined />} disabled={!quiz?.questions || quiz.questions.length === 0}>Preview</Button>
+              <Button type="primary" onClick={handlePublish}>Publish</Button>
             </Space>
           </div>
         </Header>
@@ -148,7 +187,7 @@ const QuizManager: React.FC = () => {
                             <Space direction="vertical" style={{ width: '100%' }}>
                               <Text type="secondary">{q.time} • {q.points} point{q.points !== 1 && 's'}</Text>
                               <Text strong>{q.question}</Text>
-                              <Text type="secondary">Answer: {q.answer}</Text>
+                              <Text type="secondary">Options: {JSON.parse(q.options as string).map((option: { text: string; isCorrect: boolean }) => option.isCorrect ? <strong key={option.text}>{option.text}</strong> : option.text).join(', ')}</Text>
                             </Space>
                           }
                         />
@@ -294,6 +333,18 @@ const QuizManager: React.FC = () => {
             </Upload>
           </div>
         </div>
+      </Modal>
+      <Modal
+        title="Confirm Publish"
+        visible={publishModalVisible}
+        onCancel={() => setPublishModalVisible(false)}
+        onOk={confirmPublish}
+        okText="Publish"
+        cancelText="Cancel"
+      >
+        <p>Are you sure you want to publish this quiz?</p>
+        <p>Once published, it will be available to students based on the visibility settings.</p>
+        <p><ExclamationCircleOutlined style={{ color: '#faad14', marginRight: '8px' }} /> This action cannot be undone.</p>
       </Modal>
     </>
   );
