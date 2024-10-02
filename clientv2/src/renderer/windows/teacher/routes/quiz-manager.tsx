@@ -1,24 +1,29 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useLocation, useNavigate } from "react-router-dom";
-import { Button, Input, Card, Collapse, Layout, Typography, Space, List, Divider, Modal, Select, Upload, Empty } from 'antd';
-import { LeftOutlined, SearchOutlined, PlusOutlined, SettingOutlined, EyeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { Quiz, QuizQuestion } from '@prisma/client';
+import { Button, Input, Card, Collapse, Layout, Typography, Space, List, Divider, Modal, Select, Upload, Tag, Empty } from 'antd';
+import { LeftOutlined, SearchOutlined, PlusOutlined, SettingOutlined, EyeOutlined, ExclamationCircleOutlined, CheckCircleOutlined, MinusCircleOutlined, EditOutlined, DeleteOutlined, CopyOutlined } from '@ant-design/icons';
+import { Quiz, QuizQuestion, Subject } from '@prisma/client';
 import { questionTypes, QuestionType } from '@/renderer/types/quiz';
 
 const { Header, Content, Sider } = Layout;
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Panel } = Collapse;
 
 const QuizManager: React.FC = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { quizId } = state || {};
+  const { quizId, user } = state || {};
+
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [quiz, setQuiz] = useState<(Quiz & { questions: QuizQuestion[] }) | null>(null);
   const [quizSettings, setQuizSettings] = useState<Partial<Quiz>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
   const [publishModalVisible, setPublishModalVisible] = useState(false);
+  const [tempQuizSettings, setTempQuizSettings] = useState<Partial<Quiz>>({});
+  const [isDraft, setIsDraft] = useState(false);
+  const [searchQuestionTerm, setSearchQuestionTerm] = useState('');
+
 
   useEffect(() => {
     const fetchQuiz = async () => {
@@ -32,15 +37,45 @@ const QuizManager: React.FC = () => {
   }, [quizId, location.state]);
 
   const handleSettingChange = (key: string, value: string) => {
-    setQuizSettings(prev => ({ ...prev, [key]: value }));
+    setTempQuizSettings(prev => ({ ...prev, [key]: value }));
   };
 
   const showSettings = () => {
+    setTempQuizSettings(quizSettings);
     setIsSettingsVisible(true);
   };
 
   const handleSettingsCancel = () => {
     setIsSettingsVisible(false);
+    setTempQuizSettings({});
+  };
+
+  const handleSettingsSave = async () => {
+    if (quizId && quiz) {
+      try {
+        const updatedFields = {
+          title: tempQuizSettings.title,
+          grade: tempQuizSettings.grade,
+          visibility: tempQuizSettings.visibility,
+          color: tempQuizSettings.color
+        };
+
+        const updatedQuiz = await api.database.updateQuiz(quizId, updatedFields);
+        setQuiz({ ...quiz, ...updatedQuiz });
+        setQuizSettings(prevSettings => ({ ...prevSettings, ...updatedFields }));
+        setIsSettingsVisible(false);
+        Modal.success({
+          title: 'Quiz Updated',
+          content: 'Quiz settings have been successfully updated.',
+        });
+      } catch (error) {
+        console.error('Error updating quiz:', error);
+        Modal.error({
+          title: 'Update Failed',
+          content: 'An error occurred while updating the quiz settings. Please try again.',
+        });
+      }
+    }
   };
 
   const handleBack = () => {
@@ -81,10 +116,10 @@ const QuizManager: React.FC = () => {
   };
 
   const handlePublish = () => {
-    if (!quizSettings.grade || !quizSettings.visibility || !quizSettings.subject) {
+    if (!quizSettings.grade || !quizSettings.visibility) {
       Modal.error({
         title: 'Incomplete Quiz Settings',
-        content: 'Please ensure you have set the grade, visibility, and subject for this quiz before publishing.',
+        content: 'Please ensure you have set the grade and visibility for this quiz before publishing.',
       });
       return;
     }
@@ -103,7 +138,7 @@ const QuizManager: React.FC = () => {
   const confirmPublish = async () => {
     try {
       // Implement the actual publish logic here
-      // await api.database.publishQuiz(quizId);
+      await api.database.publishQuiz(quizId);
       Modal.success({
         title: 'Quiz Published',
         content: 'Your quiz has been successfully published!',
@@ -117,6 +152,79 @@ const QuizManager: React.FC = () => {
     }
   };
 
+  const handleAddQuestion = () => {
+    navigate('/quiz-questions', { state: { quizSettings, quizId } });
+  };
+
+  const handleCreateDraft = async () => {
+    try {
+      // const draftQuiz = await api.database.createDraftFromPublishedQuiz(quizId);
+      // setQuiz(draftQuiz);
+      setIsDraft(true);
+      Modal.success({
+        title: 'Draft Created',
+        content: 'A draft version of this quiz has been created. You can now edit it without affecting the published version.',
+      });
+    } catch (error) {
+      console.error('Error creating draft:', error);
+      Modal.error({
+        title: 'Draft Creation Failed',
+        content: 'An error occurred while creating a draft of this quiz. Please try again.',
+      });
+    }
+  };
+
+  const filteredQuestions = useMemo(() => {
+    if (!quiz?.questions) return [];
+    return quiz.questions.filter(q =>
+      q.question.toLowerCase().includes(searchQuestionTerm.toLowerCase())
+    );
+  }, [quiz?.questions, searchQuestionTerm]);
+
+  const handleEditQuestion = (question: QuizQuestion) => {
+    navigate('/quiz-questions', {
+      state: {
+        quizSettings,
+        quizId,
+        editingQuestion: question,
+        questionType: questionTypes.find(type => type.label === question.type)
+      }
+    });
+  };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    Modal.confirm({
+      title: 'Delete Question',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Are you sure you want to delete this question? This action cannot be undone.',
+      okText: 'Yes',
+      okType: 'danger',
+      cancelText: 'No',
+      onOk: async () => {
+        try {
+          await api.database.deleteQuizQuestion(questionId);
+          setQuiz(prevQuiz => {
+            if (!prevQuiz) return null;
+            return {
+              ...prevQuiz,
+              questions: prevQuiz.questions.filter(q => q.id !== questionId)
+            };
+          });
+          Modal.success({
+            title: 'Question Deleted',
+            content: 'The question has been successfully deleted from the quiz.',
+          });
+        } catch (error) {
+          console.error('Error deleting question:', error);
+          Modal.error({
+            title: 'Delete Failed',
+            content: 'An error occurred while deleting the question. Please try again.',
+          });
+        }
+      },
+    });
+  };
+
   return (
     <>
       <Layout style={{ minHeight: '100vh' }}>
@@ -124,12 +232,19 @@ const QuizManager: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
             <Space>
               <Button icon={<LeftOutlined />} onClick={handleBack} style={{ marginRight: '10px' }}>Back</Button>
-              <Text strong style={{ cursor: 'pointer' }} onClick={showSettings}>{quiz?.title || 'Untitled Quiz'}</Text>
+              <Text strong style={{ cursor: 'pointer' }} onClick={showSettings}>
+                {quiz?.title || 'Untitled Quiz'}
+                {isDraft && <Tag color="orange" style={{ marginLeft: '8px' }}>Draft</Tag>}
+              </Text>
             </Space>
             <Space>
               <Button icon={<SettingOutlined />} onClick={showSettings}>Settings</Button>
               <Button icon={<EyeOutlined />} disabled={!quiz?.questions || quiz.questions.length === 0}>Preview</Button>
-              <Button type="primary" onClick={handlePublish}>Publish</Button>
+              {quiz?.published && !isDraft ? (
+                <Button icon={<CopyOutlined />} onClick={handleCreateDraft}>Create Draft</Button>
+              ) : (
+                <Button type="primary" onClick={handlePublish}>Publish</Button>
+              )}
             </Space>
           </div>
         </Header>
@@ -161,62 +276,80 @@ const QuizManager: React.FC = () => {
                     placeholder="Search questions"
                     enterButton={<Button icon={<SearchOutlined />}>Search</Button>}
                     size="large"
+                    value={searchQuestionTerm}
+                    onChange={(e) => setSearchQuestionTerm(e.target.value)}
+                    onSearch={(value) => setSearchQuestionTerm(value)}
                   />
                 </Card>
                 <Card>
                   <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                     <Text strong>{quiz?.questions.length || 0} question{(quiz?.questions.length || 0) !== 1 && 's'} ({totalPoints} points)</Text>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleAddQuestion}>Add question</Button>
                   </Space>
                 </Card>
-                {quiz?.questions && quiz.questions.length > 0 ? (
+                {filteredQuestions.length > 0 ? (
                   <List
                     itemLayout="vertical"
-                    dataSource={quiz.questions}
+                    dataSource={filteredQuestions}
                     renderItem={q => (
-                      <List.Item
+                      <Card
                         key={q.id}
+                        style={{ marginBottom: 16 }}
                         actions={[
-                          <Button key="edit" type="link">Edit</Button>,
-                          <Button key="delete" type="link" danger>Delete</Button>
+                          <Button key="edit" icon={<EditOutlined />} onClick={() => handleEditQuestion(q)}>Edit</Button>,
+                          <Button key="delete" icon={<DeleteOutlined />} danger onClick={() => handleDeleteQuestion(q.id)}>Delete</Button>
                         ]}
-                        style={{ backgroundColor: '#fff', marginBottom: 16, padding: 16, borderRadius: 8 }}
                       >
-                        <List.Item.Meta
-                          title={<Text strong style={{ fontSize: 18 }}>{q.type}</Text>}
+                        <Card.Meta
+                          title={
+                            <Space>
+                              <Tag color="blue">{q.type}</Tag>
+                              <Text type="secondary">{q.time} seconds • {q.points} point{q.points !== 1 && 's'}</Text>
+                            </Space>
+                          }
                           description={
                             <Space direction="vertical" style={{ width: '100%' }}>
-                              <Text type="secondary">{q.time} • {q.points} point{q.points !== 1 && 's'}</Text>
                               <Text strong>{q.question}</Text>
-                              <Text type="secondary">Options: {JSON.parse(q.options as string).map((option: { text: string; isCorrect: boolean }) => option.isCorrect ? <strong key={option.text}>{option.text}</strong> : option.text).join(', ')}</Text>
+                              <Divider orientation="left">Options</Divider>
+                              <List
+                                dataSource={JSON.parse(q.options as string)}
+                                renderItem={(option: { text: string; isCorrect: boolean }) => (
+                                  <List.Item>
+                                    <Space>
+                                      {option.isCorrect ?
+                                        <CheckCircleOutlined style={{ color: '#52c41a' }} /> :
+                                        <MinusCircleOutlined style={{ color: '#ff4d4f' }} />
+                                      }
+                                      <Text>{option.text}</Text>
+                                    </Space>
+                                  </List.Item>
+                                )}
+                              />
                             </Space>
                           }
                         />
-                      </List.Item>
+                      </Card>
                     )}
+                    footer={
+                      <Button
+                        type="dashed"
+                        onClick={handleAddQuestion}
+                        icon={<PlusOutlined />}
+                        style={{ width: '100%' }}
+                      >
+                        Add question
+                      </Button>
+                    }
                   />
                 ) : (
-                  <Card title="Add a new question">
-                    <Input
-                      placeholder="Search questions"
-                      style={{ marginBottom: '20px' }}
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                  <Card>
+                    <Empty
+                      description={
+                        <span>
+                          No questions found matching "{searchQuestionTerm}"
+                        </span>
+                      }
                     />
-
-                    {['basic', 'openEnded', 'interactive', 'math'].map(category => {
-                      const content = renderQuestionTypes(category);
-                      if (!content) return null;
-
-                      return (
-                        <Card
-                          key={category}
-                          title={getCategoryTitle(category)}
-                          style={{ marginBottom: '20px' }}
-                        >
-                          {content}
-                        </Card>
-                      );
-                    })}
                   </Card>
                 )}
               </Space>
@@ -260,7 +393,10 @@ const QuizManager: React.FC = () => {
         visible={isSettingsVisible}
         onCancel={handleSettingsCancel}
         footer={[
-          <Button key="save" type="primary" onClick={handleSettingsCancel}>
+          <Button key="cancel" onClick={handleSettingsCancel}>
+            Cancel
+          </Button>,
+          <Button key="save" type="primary" onClick={handleSettingsSave}>
             Save
           </Button>,
         ]}
@@ -274,31 +410,21 @@ const QuizManager: React.FC = () => {
             <div style={{ marginBottom: '16px' }}>
               <Typography.Text strong>Name</Typography.Text>
               <Input
-                value={quizSettings.title}
+                value={tempQuizSettings.title}
                 onChange={(e) => handleSettingChange('title', e.target.value)}
                 maxLength={64}
                 showCount
               />
-              {(quizSettings.title?.length || 0) < 4 && (
+              {(tempQuizSettings.title?.length || 0) < 4 && (
                 <Typography.Text type="danger">Name should be at least 4 characters long</Typography.Text>
               )}
             </div>
-            <div style={{ marginBottom: '16px' }}>
-              <Typography.Text strong>Subject</Typography.Text>
-              <Select
-                style={{ width: '100%' }}
-                placeholder="Select relevant subject"
-                value={quizSettings.subject}
-                onChange={(value) => handleSettingChange('subject', value)}
-              >
-                {/* Add subject options dynamically */}
-              </Select>
-            </div>
+            {/* Subject picker removed */}
             <div style={{ marginBottom: '16px' }}>
               <Typography.Text strong>Grade</Typography.Text>
               <Select
                 style={{ width: '100%' }}
-                value={quizSettings.grade}
+                value={tempQuizSettings.grade}
                 onChange={(value) => handleSettingChange('grade', value)}
               >
                 <Select.Option value="2nd Grade">2nd Grade</Select.Option>
@@ -310,7 +436,7 @@ const QuizManager: React.FC = () => {
               <Typography.Text strong>Visibility</Typography.Text>
               <Select
                 style={{ width: '100%' }}
-                value={quizSettings.visibility}
+                value={tempQuizSettings.visibility}
                 onChange={(value) => handleSettingChange('visibility', value)}
               >
                 <Select.Option value="Publicly visible">Publicly visible</Select.Option>
@@ -319,18 +445,15 @@ const QuizManager: React.FC = () => {
             </div>
           </div>
           <div style={{ width: '180px' }}>
-            <Typography.Text strong>Cover Image</Typography.Text>
-            <Upload
-              listType="picture-card"
-              showUploadList={false}
-              action="/upload.do" // Replace with your upload endpoint
-              style={{ width: '100%', height: '180px', marginTop: '8px' }}
-            >
-              <div style={{ padding: '16px', textAlign: 'center' }}>
-                <PlusOutlined style={{ fontSize: '24px' }} />
-                <div style={{ marginTop: '8px' }}>Add cover image</div>
-              </div>
-            </Upload>
+            <Typography.Text strong>Quiz Color</Typography.Text>
+            <div style={{ marginTop: '8px' }}>
+              <Input
+                type="color"
+                value={tempQuizSettings.color || '#1890ff'} // Default color
+                onChange={(e) => handleSettingChange('color', e.target.value)}
+                style={{ width: '100%', height: '40px' }}
+              />
+            </div>
           </div>
         </div>
       </Modal>

@@ -176,7 +176,14 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
   const handleCreateAssignment = (type: 'quiz' | 'activity') => {
     setIsAssignmentDialogOpen(false);
     if (selectedSubject) {
-      api.window.open(WindowIdentifier.QuizTeacher);
+      if (type === 'quiz') {
+        api.window.openInTray(WindowIdentifier.QuizTeacher);
+        api.window.send(WindowIdentifier.QuizTeacher, {
+          subjectId: selectedSubject.id,
+        });
+      } else {
+        api.window.open(WindowIdentifier.ActivityTeacher);
+      }
     } else {
       toast({
         title: "Error",

@@ -1,4 +1,4 @@
-import { DeviceUser, Subject } from "@prisma/client";
+import { Activity, DeviceUser, Quiz, Subject } from "@prisma/client";
 import logo from "@/renderer/assets/smnhs_logo.png";
 import { useToast } from "../hooks/use-toast";
 import { WindowIdentifier } from "@/shared/constants";
@@ -23,15 +23,9 @@ export const StudentView: React.FC<StudentViewProps> = ({
 }) => {
   const { toast } = useToast()
   const [subjectCode, setSubjectCode] = useState('');
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjects, setSubjects] = useState<(Subject & { quizzes: Quiz[], activities: Activity[] })[]>([]);
   const [isJoining, setIsJoining] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
-
-  const [subjectData, setSubjectData] = useState({
-    quizzes: [{ id: 1, name: "Quiz 1" }],
-    activities: [{ id: 1, name: "Activity 1" }],
-  });
-
+  const [selectedSubject, setSelectedSubject] = useState<(Subject & { quizzes: Quiz[], activities: Activity[] }) | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLeavingSubject, setIsLeavingSubject] = useState(false);
 
@@ -89,20 +83,8 @@ export const StudentView: React.FC<StudentViewProps> = ({
   };
 
   const handleSubjectChange = (value: string) => {
-    setSelectedSubject(value);
-    // Fetch actual data for the selected subject
-    fetchSubjectData(value);
-  };
-
-  const fetchSubjectData = async (subjectId: string) => {
-    try {
-      // Replace this with an actual API call to fetch subject data
-      // const data = await api.database.getSubjectData(subjectId);
-      // setSubjectData(data);
-    } catch (error) {
-      console.error('Error fetching subject data:', error);
-      toast({ title: "Error", description: "Failed to load subject data", variant: "destructive" });
-    }
+    const subject = subjects.find(s => s.id.toString() === value);
+    setSelectedSubject(subject || null);
   };
 
   const handleLeaveSubject = async () => {
@@ -113,10 +95,10 @@ export const StudentView: React.FC<StudentViewProps> = ({
     setIsLeavingSubject(true);
     try {
       // Replace this with your actual API call to leave the subject
-      const result = await api.database.leaveSubject(selectedSubject, user.id);
+      const result = await api.database.leaveSubject(selectedSubject.id, user.id);
       if (result.success) {
         toast({ title: "Success", description: "Subject left successfully" });
-        setSelectedSubject('');
+        setSelectedSubject(null);
         fetchSubjects(); // Refresh the subjects list
       } else {
         toast({ title: "Error", description: result.message || "Failed to leave subject", variant: "destructive" });
@@ -208,7 +190,7 @@ export const StudentView: React.FC<StudentViewProps> = ({
             <h2 className="text-md font-semibold">Select Subject</h2>
             {subjects.length > 0 ? (
               <div className="flex-grow mx-4">
-                <Select onValueChange={handleSubjectChange} value={selectedSubject}>
+                <Select onValueChange={handleSubjectChange} value={selectedSubject?.id.toString()}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a subject" />
                   </SelectTrigger>
@@ -291,22 +273,24 @@ export const StudentView: React.FC<StudentViewProps> = ({
             <h2 className="text-md font-semibold mb-3">Quizzes</h2>
             {subjects.length > 0 ? (
               selectedSubject ? (
-                subjectData.quizzes.length > 0 ? (
+                selectedSubject.quizzes.filter(quiz => quiz.published).length > 0 ? (
                   <ul className="space-y-2">
-                    {subjectData.quizzes.map((quiz) => (
-                      <li key={quiz.id} className="flex justify-between items-center">
-                        <span>{quiz.name}</span>
-                        <button
-                          className="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600"
-                          onClick={() => toast({ title: "Quiz Started", description: `You've started ${quiz.name}` })}
-                        >
-                          Start
-                        </button>
-                      </li>
-                    ))}
+                    {selectedSubject.quizzes
+                      .filter(quiz => quiz.published)
+                      .map((quiz) => (
+                        <li key={quiz.id} className="flex justify-between items-center">
+                          <span>{quiz.title}</span>
+                          <button
+                            className="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600"
+                            onClick={() => toast({ title: "Quiz Started", description: `You've started ${quiz.title}` })}
+                          >
+                            Start
+                          </button>
+                        </li>
+                      ))}
                   </ul>
                 ) : (
-                  <p className="text-gray-500">No quizzes available for this subject.</p>
+                  <p className="text-gray-500">No published quizzes available for this subject.</p>
                 )
               ) : (
                 <p className="text-gray-500">Please select a subject to view quizzes.</p>
@@ -321,9 +305,9 @@ export const StudentView: React.FC<StudentViewProps> = ({
             <h2 className="text-md font-semibold mb-3">Activities</h2>
             {subjects.length > 0 ? (
               selectedSubject ? (
-                subjectData.activities.length > 0 ? (
+                selectedSubject.activities.length > 0 ? (
                   <ul className="space-y-2">
-                    {subjectData.activities.map((activity) => (
+                    {selectedSubject.activities.map((activity) => (
                       <li key={activity.id} className="flex justify-between items-center">
                         <span>{activity.name}</span>
                         <button

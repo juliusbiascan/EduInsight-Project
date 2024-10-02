@@ -1,4 +1,4 @@
-import { BrowserWindow, screen } from "electron";
+import { BrowserWindow } from "electron";
 import url from "url";
 import path from "path";
 import { WindowIdentifier } from '../../shared/constants';
@@ -225,7 +225,7 @@ const WINDOW_CONFIGS: Record<string, WindowConfig> = {
       maximizable: false,
       alwaysOnTop: true,
       skipTaskbar: true,
-      height: 700,
+      height: 600,
       width: 1080,
     },
   },

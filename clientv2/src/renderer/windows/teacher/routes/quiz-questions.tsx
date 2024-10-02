@@ -1,29 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LeftOutlined, SaveOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Layout, Button, Select, Radio, Checkbox, Input, Space, Typography, Tabs, Tooltip, Card, message } from 'antd';
-import { questionTypes } from '@/renderer/types/quiz';
+import { questionTypes, QuestionType } from '@/renderer/types/quiz';
 
 const { Header, Content } = Layout;
 const { Option } = Select;
 const { TextArea } = Input;
 const { Title } = Typography;
 
+interface LocationState {
+  quizId: string;
+  editingQuestion?: any;
+  questionType?: QuestionType;
+}
+
+interface AnswerOption {
+  id: number;
+  text: string;
+  isCorrect: boolean;
+}
+
 const QuizQuestions: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { quizId } = location.state;
-  const [questionType, setQuestionType] = useState(location.state?.questionType || questionTypes[0]);
-  const [timeLimit, setTimeLimit] = useState(30);
-  const [points, setPoints] = useState(1);
-  const [answerType, setAnswerType] = useState("single");
-  const [answerOptions, setAnswerOptions] = useState([
-    { id: 1, text: "", isCorrect: false },
-    { id: 2, text: "", isCorrect: false },
-    { id: 3, text: "", isCorrect: false },
-    { id: 4, text: "", isCorrect: false },
-  ]);
-  const [question, setQuestion] = useState("");
+  const state = location.state as LocationState;
+  const { quizId, editingQuestion } = state;
+  const [questionType, setQuestionType] = useState<QuestionType>(state.questionType || questionTypes[0]);
+  const [timeLimit, setTimeLimit] = useState(editingQuestion?.time || 30);
+  const [points, setPoints] = useState(editingQuestion?.points || 1);
+  const [answerType, setAnswerType] = useState(
+    editingQuestion
+      ? JSON.parse(editingQuestion.options).filter((opt: AnswerOption) => opt.isCorrect).length > 1
+        ? "multiple"
+        : "single"
+      : "single"
+  );
+  const [answerOptions, setAnswerOptions] = useState<AnswerOption[]>(
+    editingQuestion
+      ? JSON.parse(editingQuestion.options).map((opt: AnswerOption, index: number) => ({ ...opt, id: index + 1 }))
+      : [
+        { id: 1, text: "", isCorrect: false },
+        { id: 2, text: "", isCorrect: false },
+        { id: 3, text: "", isCorrect: false },
+        { id: 4, text: "", isCorrect: false },
+      ]
+  );
+  const [question, setQuestion] = useState(editingQuestion?.question || "");
+
+  useEffect(() => {
+    if (editingQuestion) {
+      setQuestionType(questionTypes.find(type => type.label === editingQuestion.type) || questionTypes[0]);
+
+      // Set answer type based on the number of correct answers
+      const correctAnswersCount = JSON.parse(editingQuestion.options).filter((opt: AnswerOption) => opt.isCorrect).length;
+      setAnswerType(correctAnswersCount > 1 ? "multiple" : "single");
+    }
+  }, [editingQuestion]);
 
   const handleAnswerOptionChange = (id: number, text: string) => {
     setAnswerOptions(options =>
@@ -87,16 +120,29 @@ const QuizQuestions: React.FC = () => {
     };
 
     try {
-      const response = await api.database.createQuizQuestionByQuizId(quizId, questionData);
+      let response;
+      if (editingQuestion) {
+        response = await api.database.updateQuizQuestion(editingQuestion.id, questionData);
+        if (response) {
+          message.success('Question updated successfully');
+        } else {
+          message.error('Failed to update question');
+        }
+      } else {
+        response = await api.database.createQuizQuestionByQuizId(quizId, questionData);
+        if (response) {
+          message.success('Question saved successfully');
+        } else {
+          message.error('Failed to save question');
+        }
+      }
+
       if (response) {
         navigate('/quiz-manager', { state: { quizId } });
-        message.success('Question saved successfully');
-      } else {
-        message.error('Failed to save question');
       }
     } catch (error) {
-      console.error('Error saving question:', error);
-      message.error('An error occurred while saving the question');
+      console.error('Error saving/updating question:', error);
+      message.error('An error occurred while saving/updating the question');
     }
   };
 
@@ -185,7 +231,10 @@ const QuizQuestions: React.FC = () => {
           <Select
             value={questionType.label}
             style={{ width: 180 }}
-            onChange={(value) => setQuestionType(questionTypes.find(type => type.label === value) || questionTypes[0])}
+            onChange={(value) => {
+              const newType = questionTypes.find(type => type.label === value);
+              if (newType) setQuestionType(newType);
+            }}
           >
             {questionTypes.map((type) => (
               <Option key={type.label} value={type.label}>
@@ -206,7 +255,7 @@ const QuizQuestions: React.FC = () => {
             <Option value="120">2 minutes</Option>
           </Select>
           <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveQuestion}>
-            Save question
+            {editingQuestion ? 'Update question' : 'Save question'}
           </Button>
         </Space>
       </Header>

@@ -52,6 +52,10 @@ export default function () {
     db.subject.findMany({ where: { labId } })
   );
 
+  ipcMain.handle(IPCRoute.DATABASE_GET_SUBJECTS_BY_USER_ID, (e, userId: string) => {
+    db.subject.findMany({ where: { userId } });
+  });
+
   ipcMain.handle(IPCRoute.DATABASE_GET_USER_RECENT_LOGIN_BY_USER_ID, (e, userId: string) =>
     db.activeUserLogs.findMany({
       where: {
@@ -72,6 +76,8 @@ export default function () {
   ipcMain.handle(IPCRoute.DATABASE_GET_SUBJECT_DATA, async (e, subjectId: string) => {
     return await db.subject.findMany({ where: { id: subjectId } });
   });
+
+
 
   ipcMain.handle(IPCRoute.DATABASE_GET_SUBJECT_RECORDS_BY_SUBJECT_ID, async (e, subjectId: string) => {
     return await db.subjectRecord.findMany({ where: { subjectId } });
@@ -100,9 +106,16 @@ export default function () {
 
   ipcMain.handle(IPCRoute.DATABASE_GET_STUDENT_SUBJECTS, async (e, studentId: string) => {
     const subjectRecords = await db.subjectRecord.findMany({ where: { userId: studentId } });
-    const subjects = await db.subject.findMany({ where: { id: { in: subjectRecords.map(record => record.subjectId) } } });
+    const subjects = await db.subject.findMany({
+      where: { id: { in: subjectRecords.map(record => record.subjectId) } },
+      include: {
+        quizzes: true,
+        activities: true
+      }
+    });
     return subjects;
   });
+
 
   ipcMain.handle(IPCRoute.DATABASE_JOIN_SUBJECT, async (e, subjectCode: string, studentId: string, labId: string) => {
     const subject = await db.subject.findFirst({ where: { subjectCode } });
@@ -158,8 +171,16 @@ export default function () {
     return await db.quiz.findMany({
       where: { userId },
       include: {
-        questions: true
+        questions: true,
+        subject: true
       }
+    });
+  });
+
+  ipcMain.handle(IPCRoute.DATABASE_GET_QUIZ_BY_ID, async (e, quizId: string) => {
+    return await db.quiz.findMany({
+      where: { id: quizId },
+      include: { questions: true }
     });
   });
 
@@ -176,10 +197,17 @@ export default function () {
     });
   });
 
-  ipcMain.handle(IPCRoute.DATABASE_GET_QUIZ_BY_ID, async (e, quizId: string) => {
-    return await db.quiz.findMany({
+  ipcMain.handle(IPCRoute.DATABASE_UPDATE_QUIZ, async (e, quizId: string, quiz: Partial<Omit<Quiz, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    return await db.quiz.update({
       where: { id: quizId },
-      include: { questions: true }
+      data: quiz
+    });
+  });
+
+  ipcMain.on(IPCRoute.DATABASE_PUBLISH_QUIZ, async (e, quizId: string) => {
+    await db.quiz.update({
+      where: { id: quizId },
+      data: { published: true }
     });
   });
 
@@ -197,4 +225,20 @@ export default function () {
       return null;
     }
   });
+
+  ipcMain.handle(IPCRoute.DATABASE_UPDATE_QUIZ_QUESTION, async (e, questionId: string, question: Partial<Omit<QuizQuestion, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    return await db.quizQuestion.update({
+      where: { id: questionId },
+      data: question
+    });
+  });
+
+
+  ipcMain.on(IPCRoute.DATABASE_DELETE_QUIZ_QUESTION, async (e, questionId: string) => {
+    await db.quizQuestion.delete({
+      where: { id: questionId }
+    });
+  });
+
+
 }

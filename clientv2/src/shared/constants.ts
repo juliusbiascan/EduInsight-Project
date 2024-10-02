@@ -18,6 +18,7 @@ export enum WindowIdentifier {
   Logout = 'logout_window',
   Splash = 'splash_window',
   QuizTeacher = 'quiz_teacher_window',
+  ActivityTeacher = 'activity_teacher_window',
 }
 
 /**
@@ -26,6 +27,7 @@ export enum WindowIdentifier {
  * @enum
  */
 export enum IPCRoute {
+  DATABASE_PUBLISH_QUIZ = '/database/publish_quiz',
   APP_INFO = '/application/info',
   DATABASE_CHECK_CONNECTION = '/database/check_connection',
   DATABASE_GET_LABS = '/database/get_labs',
@@ -42,6 +44,7 @@ export enum IPCRoute {
   DATABASE_GET_SUBJECT_RECORDS_BY_SUBJECT_ID = '/database/get_subject_records_by_subject_id',
   DATABASE_GET_ACTIVE_USERS_BY_SUBJECT_ID = '/database/get_active_users_by_subject_id',
   DATABASE_GET_SUBJECTS_BY_LAB_ID = '/database/get_subjects_by_lab_id',
+  DATABASE_GET_SUBJECTS_BY_USER_ID = '/database/get_subjects_by_user_id',
   DATABASE_GET_SUBJECT_BY_ID = '/database/get_subject_by_id',
   DATABASE_GET_STUDENT_SUBJECTS = '/database/get_student_subjects',
   DATABASE_GET_SUBJECT_DATA = '/database/get_subject_data',
@@ -54,16 +57,20 @@ export enum IPCRoute {
   DATABASE_GET_QUIZ_BY_ID = '/database/get_quiz_by_id',
   DATABASE_DELETE_QUIZ = '/database/delete_quiz',
   DATABASE_CREATE_QUIZ = '/database/create_quiz',
+  DATABASE_UPDATE_QUIZ = '/database/update_quiz',
   DATABASE_CREATE_QUIZ_QUESTION = '/database/create_quiz_question',
+  DATABASE_UPDATE_QUIZ_QUESTION = '/database/update_quiz_question',
+  DATABASE_DELETE_QUIZ_QUESTION = '/database/delete_quiz_question',
   UPDATER_CHECKING = '/updater/checking',
   UPDATER_DOWNLOADING = '/updater/downloading',
   UPDATER_FINISHED = '/updater/finished',
   UPDATER_INSTALL = '/updater/install',
   UPDATER_NO_UPDATE = '/updater/noUpdate',
   UPDATER_START = '/updater/start',
+
   WINDOW_CLOSE = '/window/close',
   WINDOW_SEND = '/window/send',
   WINDOW_OPEN = '/window/open',
   WINDOW_HIDE = '/window/hide',
-
+  WINDOW_OPEN_IN_TRAY = '/window/open_in_tray',
 }
