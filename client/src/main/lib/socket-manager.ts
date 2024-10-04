@@ -1,10 +1,28 @@
-import { io, Socket } from "socket.io-client";
+import { Socket, io } from "socket.io-client";
 
-export function createSocketConnection(deviceId: string): Socket {
-  const socket = io("https://192.168.1.82:4000", {
-    rejectUnauthorized: false,
-    transports: ['websocket']
-  });
+let socketInstance: Socket | null = null;
 
-  return socket;
+export function createSocketConnection(): Socket {
+  if (!socketInstance) {
+    socketInstance = io("https://192.168.1.82:4000", {
+      rejectUnauthorized: false,
+      transports: ['websocket'],
+    });
+  }
+  return socketInstance;
+}
+
+export function getSocketInstance(): Socket | null {
+  return socketInstance;
+}
+
+export function isSocketConnected(): boolean {
+  return socketInstance !== null && socketInstance.connected;
+}
+
+export function disconnectSocket(): void {
+  if (socketInstance) {
+    socketInstance.disconnect();
+    socketInstance = null;
+  }
 }

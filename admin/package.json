@@ -12,10 +12,12 @@
     "postinstall": "prisma generate",
     "docker:dev": "npm run dev",
     "docker:compose:dev": "docker-compose down && docker compose up -d --build",
-    "docker:compose:prod": "docker-compose down && docker compose -f docker-compose.prod.yml up -d --build"
+    "docker:compose:prod": "docker-compose down && docker compose -f docker-compose.prod.yml up -d --build",
+    "docker:compose:db": "docker-compose down && docker compose -f docker-compose.dbonly.yml up -d --build"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^1.6.0",
+    "@heroicons/react": "^2.1.5",
     "@hookform/resolvers": "^3.3.4",
     "@prisma/client": "^5.19.1",
     "@radix-ui/react-accordion": "^1.2.0",
@@ -44,6 +46,7 @@
     "clsx": "^2.0.0",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
+    "framer-motion": "^11.11.1",
     "initials": "^3.1.2",
     "lucide-react": "^0.378.0",
     "net": "^1.0.2",

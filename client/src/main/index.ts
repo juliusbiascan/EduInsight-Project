@@ -15,10 +15,9 @@ import { Device, DeviceUser, Prisma } from '@prisma/client';
 import { WindowManager } from './lib';
 import * as IPCHandlers from './handlers';
 import is from 'electron-is';
-import { Socket } from "socket.io-client";
+import { createSocketConnection, getSocketInstance, isSocketConnected } from './lib/socket-manager';
 import * as robot from "@jitsi/robotjs";
-import { createSocketConnection } from './lib/socket-manager';
-
+import { Socket } from "socket.io-client";
 /**
  * Handles the 'ready' event of the app.
  * Sets up IPC handlers and creates the system tray icon.
@@ -26,6 +25,9 @@ import { createSocketConnection } from './lib/socket-manager';
 function handleOnReady() {
   // register all ipc handlers before creating the app window
   Object.values(IPCHandlers).forEach((handler) => handler());
+
+  // Create socket connection using the Singleton
+  createSocketConnection();
 }
 
 /**
@@ -46,20 +48,18 @@ function handleNoDeviceFound() {
  * @param {any} error - The error that occurred.
  */
 function handleSomethingWentWrong(error: any) {
-  WindowManager.get(WindowManager.WINDOW_CONFIGS.sww_window.id);
+
 }
 
 /**
  * Handles the scenario when the server is down.
  * Opens the "Server Down" window.
  */
+
 function handleServerDown() {
-  WindowManager.get(WindowManager.WINDOW_CONFIGS.down_window.id);
 }
 
-let ws: Socket | null = null;
 let previousUserId: string | null = null;
-
 /**
  * Handles the scenario when there's an active user.
  * Starts various services and shows the welcome window.
@@ -69,18 +69,18 @@ function handleActiveUser(user: DeviceUser, device: Device) {
   if (!previousUserId || previousUserId !== user.id) {
     console.log('Active user');
 
-    // Create socket connection
-    ws = createSocketConnection(device.id);
+    // Get the socket instance
+    const ws = getSocketInstance();
 
-    // Set up socket event listeners
-    setupSocketEventListeners(ws, device.id);
+    // Only set up socket event listeners if the socket is not already connected
+    if (!isSocketConnected()) {
+      setupSocketEventListeners(ws, device.id);
+    }
 
     createTray(path.join(__dirname, 'img/tray-icon.ico'));
     createWelcomeWindow(user.firstName, user.lastName);
-    // setPowerMonitoring(user.id, device.id, device.labId);
-    // setActivityMonitoring(user.id, device.id, device.labId);
-    WindowManager.get(WindowManager.WINDOW_CONFIGS.main_window.id).close()
 
+    WindowManager.get(WindowManager.WINDOW_CONFIGS.main_window.id).close()
     previousUserId = user.id;
   }
 }
@@ -93,13 +93,10 @@ function handleActiveUser(user: DeviceUser, device: Device) {
 function handleNoActiveUser(devId: string) {
   if (!previousUserId || previousUserId !== devId) {
 
-    // stopActivityMonitoring();
-    // stopPowerMonitoring();
-
+    const ws = getSocketInstance();
     if (ws) {
       ws.emit("stop-sharing", devId);
       ws.disconnect();
-      ws = null;
     }
 
     removeTray();
@@ -163,6 +160,7 @@ function handleOnActivate() {
         if (!device) {
           handleNoDeviceFound();
         } else {
+
           const activeUsers = await db.activeDeviceUser.findFirst({
             where: {
               deviceId: device.id,
@@ -208,7 +206,7 @@ function handleOnActivate() {
 
 let captureInterval: NodeJS.Timeout | null = null;
 
-function startScreenCapture(deviceId: string) {
+function startScreenCapture(ws: Socket, deviceId: string) {
   if (captureInterval) {
     clearInterval(captureInterval);
   }
@@ -234,13 +232,14 @@ function stopScreenCapture() {
 }
 
 function setupSocketEventListeners(socket: Socket, deviceId: string) {
+
   socket.on('connect', () => {
     socket.emit('join-server', deviceId);
   });
 
   socket.on('start_sharing', () => {
     console.log("Starting screen sharing for device:", deviceId);
-    startScreenCapture(deviceId);
+    startScreenCapture(socket, deviceId);
   });
 
   socket.on('stop_sharing', stopScreenCapture);

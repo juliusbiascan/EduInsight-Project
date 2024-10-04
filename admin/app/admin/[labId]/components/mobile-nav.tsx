@@ -7,12 +7,16 @@ import { HamburgerMenuIcon } from "@radix-ui/react-icons"
 
 import { siteConfig } from "@/config/site"
 import { cn } from "@/lib/utils"
-import { Icons } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
-export function MobileNav() {
+interface MobileNavProps {
+  children: React.ReactNode
+}
+
+export const MobileNav: React.FC<MobileNavProps> = ({ children }) => {
+
   const [open, setOpen] = React.useState(false)
   const pathname = usePathname();
   const params = useParams();

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { useQRCode } from 'next-qrcode';
-import { RegistrationColumn } from "@/app/(protected)/staff/(routes)/registration/components/columns";
+import { RegistrationColumn } from "@/app/staff/(routes)/registration/components/columns";
 
 interface QRModalProps {
   isOpen: boolean;

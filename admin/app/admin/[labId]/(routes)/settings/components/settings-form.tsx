@@ -5,7 +5,7 @@ import axios from "axios"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { toast } from "react-hot-toast"
-import { Trash } from "lucide-react"
+import { Trash, Beaker, Save } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -19,8 +19,8 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Separator } from "@/components/ui/separator"
-import { Heading } from "@/components/ui/heading"
 import { AlertModal } from "@/components/modals/alert-modal"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const formSchema = z.object({
   name: z.string().min(2),
@@ -51,9 +51,9 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
       setLoading(true);
       await axios.patch(`/api/labaratory/${params.labId}`, data);
       router.refresh();
-      toast.success('Lab updated.');
+      toast.success('Lab updated successfully! 🎉');
     } catch (error: any) {
-      toast.error('Something went wrong.');
+      toast.error('Oops! Something went wrong. 😕');
     } finally {
       setLoading(false);
     }
@@ -65,9 +65,9 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
       await axios.delete(`/api/labaratory/${params.labId}`);
       router.refresh();
       router.push('/redirect');
-      toast.success('Lab deleted.');
+      toast.success('Lab deleted successfully! 👋');
     } catch (error: any) {
-      toast.error('Make sure you removed all devices and staff first.');
+      toast.error('Please remove all devices and staff first. 🧹');
     } finally {
       setLoading(false);
       setOpen(false);
@@ -75,48 +75,64 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
   }
 
   return (
-    <>
+    <Card className="w-full max-w-2xl mx-auto shadow-lg">
       <AlertModal
         isOpen={open}
         onClose={() => setOpen(false)}
         onConfirm={onDelete}
         loading={loading}
       />
-      <div className="flex items-center justify-between">
-        <Heading title="Lab settings" description="Manage Labaratory preferences" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-2xl font-bold">
+          <Beaker className="w-6 h-6 inline-block mr-2" />
+          Lab Settings
+        </CardTitle>
         <Button
           disabled={loading}
           variant="destructive"
           size="sm"
           onClick={() => setOpen(true)}
         >
-          <Trash className="h-4 w-4" />
+          <Trash className="h-4 w-4 mr-2" />
+          Delete Lab
         </Button>
-      </div>
-      <Separator />
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-full">
-          <div className="grid grid-cols-3 gap-8">
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground mb-6">Manage your laboratory preferences</p>
+        <Separator className="my-6" />
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-full">
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Lab Name</FormLabel>
                   <FormControl>
-                    <Input disabled={loading} placeholder="Page name" {...field} />
+                    <Input
+                      disabled={loading}
+                      placeholder="Enter your lab name"
+                      {...field}
+                      className="w-full"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </div>
-          <Button disabled={loading} className="ml-auto" type="submit">
-            Save changes
-          </Button>
-        </form>
-      </Form>
-
-    </>
+            <div className="flex justify-end">
+              <Button
+                disabled={loading}
+                type="submit"
+                className="w-full sm:w-auto"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 };

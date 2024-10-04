@@ -11,7 +11,8 @@ import { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { WindowIdentifier } from '@/shared/constants';
 import { Labaratory } from '@prisma/client';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Separator } from '../components/ui/separator';
 import { Toaster } from '../components/ui/toaster';
 import { useToast } from '../hooks/use-toast';
 import { sleep } from '@/shared/utils';
@@ -47,6 +48,7 @@ function Index() {
     api.database.getNetworkNames().then(setNetworkNames);
   }, []);
 
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       console.log("Device Name:", values.deviceName);
@@ -75,16 +77,40 @@ function Index() {
     api.window.close(WindowIdentifier.Setup);
   };
 
+  if (labs.length === 0) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-100">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="text-center">
+            <img src={logo} alt="Logo" className="h-20 mx-auto mb-4" />
+            <CardTitle className="text-2xl font-bold text-gray-800">No Labs Found</CardTitle>
+            <CardDescription className="text-gray-600">
+              You need to set up a lab before you can proceed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={handleExit} className="w-full bg-red-500 hover:bg-red-600 text-white">
+              Exit
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center space-y-2">
-          <img src={logo} alt="Logo" className="h-16 mx-auto" />
-          <CardTitle className="text-xl font-bold text-gray-800">Device Setup</CardTitle>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader className="text-center space-y-2 pb-6">
+          <img src={logo} alt="Logo" className="h-20 mx-auto" />
+          <CardTitle className="text-2xl font-bold text-gray-800">Device Setup</CardTitle>
+          <CardDescription className="text-gray-600">
+            Configure your device settings below
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="deviceName"
@@ -142,12 +168,13 @@ function Index() {
                   </FormItem>
                 )}
               />
-              <div className="flex justify-between pt-4">
-                <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2">
+              <Separator className="my-6" />
+              <div className="flex flex-col space-y-3">
+                <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white">
                   Setup Device
                 </Button>
                 <Button type="button" variant="outline" onClick={handleExit}
-                  className="border-red-500 text-red-500 hover:bg-red-50 text-sm px-4 py-2">
+                  className="border-red-500 text-red-500 hover:bg-red-50">
                   Exit
                 </Button>
               </div>

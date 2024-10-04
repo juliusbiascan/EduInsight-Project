@@ -40,7 +40,6 @@ export function setPowerMonitor(userId: string, deviceId: string, labId: string)
 
       if (currentWindow !== newWindow) {
 
-
         await db.activityLogs.create({
 
           data: {
