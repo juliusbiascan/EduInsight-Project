@@ -1,7 +1,7 @@
 import '../styles/globals.css';
 import { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { ActiveDeviceUser, ActiveUserLogs, Device, DeviceUser, DeviceUserRole } from '@prisma/client';
+import { ActiveUserLogs, Device, DeviceUser, DeviceUserRole, Subject } from '@prisma/client';
 import { Toaster } from "@/renderer/components/ui/toaster"
 import { useToast } from "@/renderer/hooks/use-toast"
 import { Button } from "@/renderer/components/ui/button"
@@ -17,7 +17,7 @@ import { StudentView } from '../components/student-view';
  * @component
  */
 function Index() {
-  const [user, setUser] = useState<DeviceUser | null>(null);
+  const [user, setUser] = useState<DeviceUser & { subjects: Subject[] } | null>(null);
   const [device, setDevice] = useState<Device | null>(null);
   const [recentLogin, setRecentLogin] = useState<ActiveUserLogs | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,13 +39,8 @@ function Index() {
               if (recentLogin && recentLogin.length > 0) {
                 setRecentLogin(recentLogin[1]);
               }
-              toast({
-                title: "Welcome back!",
-                description: `Hello, ${users[0].firstName}!`,
-              })
             }
           }
-
         }
       } catch (error) {
         console.error("Error fetching user data:", error);

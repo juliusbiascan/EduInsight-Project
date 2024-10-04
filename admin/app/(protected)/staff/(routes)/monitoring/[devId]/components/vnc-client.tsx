@@ -1,14 +1,13 @@
 "use client"
 
-import Image from "next/image";
-import { Device } from "@prisma/client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import toast from "react-hot-toast";
+import { Device } from "@prisma/client";
 import { io, Socket } from "socket.io-client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Maximize, Minimize } from "lucide-react";
+import { Maximize, Minimize, AlertCircle } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface VncClientProps {
   device: Device;
@@ -20,19 +19,17 @@ export const VncClient: React.FC<VncClientProps> = ({
   const devId = device.id;
   const devHostname = device.devHostname;
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const emitMouseEvent = useCallback((eventName: string, data: any) => {
     if (socket) {
       socket.emit(eventName, { remoteId: devId, ...data });
     }
   }, [devId, socket]);
-
-  const handleScreencastData = useCallback((imgStr: string) => {
-    setImgSrc("data:image/png;base64," + imgStr);
-  }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (containerRef.current) {
@@ -64,27 +61,66 @@ export const VncClient: React.FC<VncClientProps> = ({
   };
 
   useEffect(() => {
-    const newSocket = io(`https://${devHostname}:4000`);
+    const newSocket = io(`https://${devHostname}:4000`, {
+      transports: ['websocket'],
+      rejectUnauthorized: false
+    });
     setSocket(newSocket);
 
     newSocket.on("connect", () => {
+      console.log("Connected to server");
       newSocket.emit("join-server", devId);
-      newSocket.emit("start-screencast", devId);
+      newSocket.emit("start-sharing", devId);
+      setIsConnected(true);
     });
 
-    newSocket.on("screencast-data", handleScreencastData);
+    newSocket.on("screen-share", ({ deviceId, screenData }) => {
+      if (deviceId === devId && canvasRef.current) {
+        // Clean up the received data
+        let cleanedData = screenData;
 
-    newSocket.on("error", (error) => {
-      console.error("WebSocket error:", error);
-      toast.error("Failed to connect to the remote device. Please try again.");
+        // Remove any data URL prefixes
+        const dataUrlPrefixes = [
+          'data:image/jpeg;base64,',
+          'data:image/png;base64,',
+          'data:image/webp;base64,',
+        ];
+
+        dataUrlPrefixes.forEach(prefix => {
+          cleanedData = cleanedData.replace(new RegExp(`^${prefix}`, 'g'), '');
+        });
+
+        // Remove any non-base64 characters
+        cleanedData = cleanedData.replace(/[^A-Za-z0-9+/=]/g, '');
+
+        if (cleanedData) {
+          const img = new Image();
+          img.onload = () => {
+            const ctx = canvasRef.current?.getContext('2d');
+            if (ctx && canvasRef.current) {
+              // Clear the canvas before drawing the new image
+              ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+              // Draw the image to fit the canvas while maintaining aspect ratio
+              const scale = Math.min(canvasRef.current.width / img.width, canvasRef.current.height / img.height);
+              const x = (canvasRef.current.width / 2) - (img.width / 2) * scale;
+              const y = (canvasRef.current.height / 2) - (img.height / 2) * scale;
+              ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            }
+          };
+          img.onerror = (error) => {
+            console.error('Error loading image:', error);
+            setError(`Error loading image: ${error.toString()}`);
+          };
+          img.src = `data:image/png;base64,${cleanedData}`;
+        }
+      }
     });
 
     return () => {
-      newSocket.off("screencast-data", handleScreencastData);
-      newSocket.emit("stop-screencast", devId);
+      newSocket.emit("stop-sharing", devId);
       newSocket.disconnect();
     };
-  }, [devHostname, devId, handleScreencastData]);
+  }, [devHostname, devId]);
 
   return (
     <Card className={`overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
@@ -93,8 +129,8 @@ export const VncClient: React.FC<VncClientProps> = ({
           <h2 className="text-lg font-semibold">Remote Device: {device.name}</h2>
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1">
-              <div className={`w-2 h-2 rounded-full ${socket?.connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm">{socket?.connected ? 'Connected' : 'Disconnected'}</span>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm">{isConnected ? 'Connected' : 'Disconnected'}</span>
             </div>
             <Button variant="ghost" size="sm" onClick={toggleFullscreen}>
               {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
@@ -112,13 +148,12 @@ export const VncClient: React.FC<VncClientProps> = ({
           tabIndex={0}
           style={{ cursor: 'none' }}
         >
-          {imgSrc ? (
-            <Image
-              src={imgSrc}
-              layout="fill"
-              objectFit="contain"
-              alt="screencast"
-              unoptimized
+          {isConnected ? (
+            <canvas
+              ref={canvasRef}
+              width={1280}
+              height={720}
+              className="w-full h-full object-contain"
             />
           ) : (
             <div className="flex items-center justify-center h-full">

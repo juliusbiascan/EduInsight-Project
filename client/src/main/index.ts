@@ -5,17 +5,19 @@
  */
 
 import AutoLaunch from 'auto-launch';
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, desktopCapturer, screen } from 'electron';
 import { createTray, removeTray } from './lib/tray-menu';
 import { createWelcomeWindow } from './lib/window-manager';
 import path from 'path';
 import { machineIdSync } from 'node-machine-id';
 import { db } from '../shared/db';
 import { Device, DeviceUser, Prisma } from '@prisma/client';
-import { setActivityMonitoring, stopActivityMonitoring, setPowerMonitor, stopPowerMonitoring } from './lib/monitoring';
 import { WindowManager } from './lib';
 import * as IPCHandlers from './handlers';
 import is from 'electron-is';
+import { Socket } from "socket.io-client";
+import * as robot from "@jitsi/robotjs";
+import { createSocketConnection } from './lib/socket-manager';
 
 /**
  * Handles the 'ready' event of the app.
@@ -55,25 +57,8 @@ function handleServerDown() {
   WindowManager.get(WindowManager.WINDOW_CONFIGS.down_window.id);
 }
 
+let ws: Socket | null = null;
 let previousUserId: string | null = null;
-
-/**
- * Handles the scenario when there's no active user.
- * Stops various services and shows the main window.
- * @param {string} devId - The device ID.
- */
-function handleNoActiveUser(devId: string) {
-  if (!previousUserId || previousUserId != devId) {
-
-    stopActivityMonitoring();
-    stopPowerMonitoring();
-
-    removeTray();
-    console.log('No active user');
-    WindowManager.get(WindowManager.WINDOW_CONFIGS.main_window.id)
-    previousUserId = devId;
-  }
-}
 
 /**
  * Handles the scenario when there's an active user.
@@ -81,18 +66,46 @@ function handleNoActiveUser(devId: string) {
  * @param {DeviceUser} user - The active user.
  */
 function handleActiveUser(user: DeviceUser, device: Device) {
-  if (!previousUserId || previousUserId != user.id) {
-
+  if (!previousUserId || previousUserId !== user.id) {
     console.log('Active user');
-    // startServer();
-    setPowerMonitor(user.id, device.id, device.labId);
-    setActivityMonitoring(user.id, device.id, device.labId);
+
+    // Create socket connection
+    ws = createSocketConnection(device.id);
+
+    // Set up socket event listeners
+    setupSocketEventListeners(ws, device.id);
+
     createTray(path.join(__dirname, 'img/tray-icon.ico'));
     createWelcomeWindow(user.firstName, user.lastName);
-
+    // setPowerMonitoring(user.id, device.id, device.labId);
+    // setActivityMonitoring(user.id, device.id, device.labId);
     WindowManager.get(WindowManager.WINDOW_CONFIGS.main_window.id).close()
 
     previousUserId = user.id;
+  }
+}
+
+/**
+ * Handles the scenario when there's no active user.
+ * Stops various services and shows the main window.
+ * @param {string} devId - The device ID.
+ */
+function handleNoActiveUser(devId: string) {
+  if (!previousUserId || previousUserId !== devId) {
+
+    // stopActivityMonitoring();
+    // stopPowerMonitoring();
+
+    if (ws) {
+      ws.emit("stop-sharing", devId);
+      ws.disconnect();
+      ws = null;
+    }
+
+    removeTray();
+    console.log('No active user');
+    WindowManager.get(WindowManager.WINDOW_CONFIGS.main_window.id)
+    previousUserId = devId;
   }
 }
 
@@ -192,3 +205,99 @@ function handleOnActivate() {
   app.on('activate', handleOnActivate);
 
 })();
+
+let captureInterval: NodeJS.Timeout | null = null;
+
+function startScreenCapture(deviceId: string) {
+  if (captureInterval) {
+    clearInterval(captureInterval);
+  }
+
+  captureInterval = setInterval(() => {
+    desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1920, height: 1080 } })
+      .then(sources => {
+        const source = sources[0];
+        const base64 = source.thumbnail.toDataURL();
+        ws.emit('screen-share', { deviceId, screenData: base64 });
+      })
+      .catch(error => {
+        console.error('Error capturing screen:', error);
+      });
+  }, 1000); // Capture every second
+}
+
+function stopScreenCapture() {
+  if (captureInterval) {
+    clearInterval(captureInterval);
+    captureInterval = null;
+  }
+}
+
+function setupSocketEventListeners(socket: Socket, deviceId: string) {
+  socket.on('connect', () => {
+    socket.emit('join-server', deviceId);
+  });
+
+  socket.on('start_sharing', () => {
+    console.log("Starting screen sharing for device:", deviceId);
+    startScreenCapture(deviceId);
+  });
+
+  socket.on('stop_sharing', stopScreenCapture);
+
+  socket.on('mouse_move', ({ clientX, clientY, clientWidth, clientHeight }) => {
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
+    const hostX = clientX * width / clientWidth;
+    const hostY = clientY * height / clientHeight;
+
+    robot.moveMouse(hostX, hostY);
+  });
+
+  socket.on('mouse_click', (data) => {
+    if (data) {
+      robot.mouseClick(data.button, data.double);
+    }
+  });
+
+  socket.on('mouse_scroll', ({ deltaX, deltaY }) => {
+    robot.scrollMouse(deltaX, deltaY);
+  });
+
+  let mouseDirection: string | null = null;
+
+  socket.on('mouse_drag', ({ direction, clientX, clientY, clientWidth, clientHeight }) => {
+    if (direction !== mouseDirection) {
+      mouseDirection = direction;
+      robot.mouseToggle(direction);
+    }
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
+    const hostX = clientX * width / clientWidth;
+    const hostY = clientY * height / clientHeight;
+
+    robot.dragMouse(hostX, hostY);
+  });
+
+  socket.on('keyboard', (keys) => {
+    try {
+      if (keys[1].length > 0 && (keys[0].toLowerCase() !== keys[1][0].toLowerCase())) {
+        robot.keyToggle(keys[0], "down", keys[1]);
+        robot.keyToggle(keys[0], "up", keys[1]);
+      } else if (keys[1].length === 0) {
+        robot.keyTap(keys[0]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  });
+
+  // Add error and disconnect handlers
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log('Disconnected from server:', reason);
+  });
+}

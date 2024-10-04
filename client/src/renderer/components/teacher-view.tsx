@@ -5,7 +5,7 @@ import { Toaster } from "./ui/toaster";
 import { useToast } from "../hooks/use-toast";
 import { ActiveDeviceUser, ActiveUserLogs, DeviceUser, Subject, SubjectRecord } from "@prisma/client";
 import { useEffect, useRef, useState } from "react";
-import { LogOut, PlusCircle } from "lucide-react";
+import { LogOut, PlusCircle, Book, ChevronDown, RefreshCw } from "lucide-react";
 import { WindowIdentifier } from "@/shared/constants";
 import { formatDistance } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/renderer/components/ui/select"
@@ -17,9 +17,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Trash2 } from "lucide-react";
 import { generateSubjectCode } from "@/shared/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/renderer/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/renderer/components/ui/avatar"
+import { Rainbow, Sun, Cloud, Stars } from "lucide-react";
 
 interface TeacherViewProps {
-  user: DeviceUser;
+  user: DeviceUser & { subjects: Subject[] };
   recentLogin: ActiveUserLogs | null;
   handleLogout: () => void;
 }
@@ -42,12 +44,14 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const closeDialogRef = useRef<() => void>(() => { });
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [isCreateSubjectDialogOpen, setIsCreateSubjectDialogOpen] = useState(false);
 
   useEffect(() => {
-    const fetchSubjects = async () => {
+    const fetchSubjects = () => {
       setIsLoading(true);
       try {
-        const fetchedSubjects = await api.database.getSubjectsByLabId(user.labId);
+        const fetchedSubjects = user.subjects;
         if (fetchedSubjects && fetchedSubjects.length > 0) {
           setSubjects(fetchedSubjects);
           setSelectedSubject(fetchedSubjects[0]);
@@ -55,6 +59,7 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
           setSubjects([]);
           setSelectedSubject(null);
         }
+
       } catch (error) {
         console.error("Error fetching subjects:", error);
         toast({
@@ -100,8 +105,7 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
         setNewSubjectName('');
         setNewSubjectCode('');
         setNewSubjectDescription('');
-        setIsDialogOpen(false); // Close the dialog
-        closeDialogRef.current(); // Call the close function
+        setIsCreateSubjectDialogOpen(false);
       } catch (error) {
         console.error("Error creating subject:", error);
         let errorMessage = "Failed to create subject. Please try again.";
@@ -131,8 +135,8 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
     if (selectedSubject) {
       const fetchActiveUsers = async () => {
         const subjectRecords = await api.database.getSubjectRecordsBySubjectId(selectedSubject.id);
-
         setSubjectRecords(subjectRecords);
+
         const activeUsers = await api.database.getActiveUsersBySubjectId(selectedSubject.id);
         setActiveUsers(activeUsers);
       };
@@ -182,7 +186,11 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
           subjectId: selectedSubject.id,
         });
       } else {
-        api.window.open(WindowIdentifier.ActivityTeacher);
+        toast({
+          title: "Coming Soon",
+          description: "Activity creation will be available in a future update.",
+          variant: "default",
+        });
       }
     } else {
       toast({
@@ -193,293 +201,362 @@ export const TeacherView: React.FC<TeacherViewProps> = ({
     }
   };
 
+  const handleRefresh = () => {
+    window.location.reload();
+    toast({ title: "Refreshed", description: "Page content has been updated." });
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
+    <div className="flex flex-col h-screen bg-gradient-to-b from-pink-100 to-purple-100">
       {/* Header */}
-      <header className="bg-indigo-600 text-white p-3 flex justify-between items-center">
-        {/* Logo */}
+      <header className="bg-gradient-to-r from-pink-400 to-purple-400 text-white p-3 flex justify-between items-center rounded-b-lg shadow-md">
         <div className="flex items-center">
-          <img src={logo} alt="EduInsight Logo" className="h-8 w-auto mr-2" />
-          <h1 className="text-lg font-semibold">Teacher Dashboard</h1>
+          <img src={logo} alt="EduInsight Logo" className="h-10 w-auto mr-2 rounded-full border-2 border-white" />
+          <h1 className="text-2xl font-bold font-comic-sans">Teacher's Dashboard</h1>
         </div>
-        {/* User Info and Settings */}
-        <div className="flex items-center">
-          <img src={user.image || '/default-avatar.png'} alt="User Avatar" className="w-6 h-6 rounded-full mr-2" />
-          <span className="text-sm mr-4">{user.firstName} {user.lastName}</span>
-          <button
-            className="text-white hover:text-gray-200 mr-2"
-            onClick={() => toast({ title: "Settings", description: "Settings panel opened" })}
-          >
-            {/* ... settings icon SVG ... */}
-          </button>
-          <button
-            className="text-white hover:text-gray-200 mr-2"
-            onClick={() => window.location.reload()}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-          <button
-            className="text-white hover:text-gray-200 mr-2"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-6 w-6" />
-          </button>
-          <button
-            className="text-white hover:text-gray-200"
-            onClick={() => api.window.hide(WindowIdentifier.Dashboard)}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        <div className="flex items-center space-x-2">
+          <Button variant="ghost" size="sm" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+            <DialogTrigger asChild>
+              <div className="flex items-center cursor-pointer hover:bg-blue-500 rounded-full p-2 transition-colors duration-200">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={user.image || '/default-avatar.png'} alt="User Avatar" />
+                  <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm ml-2 mr-1">{user.firstName} {user.lastName}</span>
+                <ChevronDown className="h-4 w-4" />
+              </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Teacher Information</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Name:</p>
+                  <p className="font-medium">{user.firstName} {user.lastName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">TeacherID:</p>
+                  <p className="font-medium">{user.schoolId}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Last Login:</p>
+                  <p className="font-medium">
+                    {recentLogin
+                      ? formatDistance(new Date(recentLogin.createdAt), new Date(), { addSuffix: true })
+                      : "No recent login"}
+                  </p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
       {/* Main content */}
-      <main className="flex-grow p-4 overflow-y-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Teacher Info Card */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-md font-semibold mb-3">Teacher Information</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Name:</p>
-                <p className="font-medium">{user.firstName} {user.lastName}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Subject:</p>
-                <div className="flex space-x-2">
-                  {isLoading ? (
-                    <p>Loading subjects...</p>
-                  ) : subjects.length > 0 ? (
-                    <>
-                      <Select
-                        value={selectedSubject?.id || undefined}
-                        onValueChange={handleSubjectChange}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a subject" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {subjects.map((subject) => (
-                            <SelectItem key={subject.id} value={subject.id || 'placeholder-id'}>
-                              {subject.name} ({subject.subjectCode})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="icon" disabled={!selectedSubject}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the
-                              {selectedSubject?.name} subject and remove all associated data.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteSubject}>
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </>
-                  ) : (
-                    <p>No subjects available</p>
-                  )}
-                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={() => setIsDialogOpen(true)}>
-                        <PlusCircle className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Create New Subject</DialogTitle>
-                        <DialogDescription>
-                          Enter the details of the new subject you want to create.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="name" className="text-right">
-                            Name
-                          </Label>
-                          <Input
-                            id="name"
-                            value={newSubjectName}
-                            onChange={(e) => setNewSubjectName(e.target.value)}
-                            className="col-span-3"
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="code" className="text-right">
-                            Code
-                          </Label>
-                          <Input
-                            id="code"
-                            value={newSubjectCode}
-                            readOnly
-                            className="col-span-3 bg-gray-100"
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="description" className="text-right">
-                            Description
-                          </Label>
-                          <Textarea
-                            id="description"
-                            value={newSubjectDescription}
-                            onChange={(e) => setNewSubjectDescription(e.target.value)}
-                            className="col-span-3"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={handleCreateSubject}>Create Subject</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">TeacherID:</p>
-                <p className="font-medium">{user.schoolId}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Last Login:</p>
-                <p className="font-medium">
-                  {recentLogin
-                    ? formatDistance(new Date(recentLogin.createdAt), new Date(), { addSuffix: true })
-                    : "No recent login"}
-                </p>
-              </div>
+      <main className="flex-grow p-6 overflow-y-auto">
+        {/* Subject Selection */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border-4 border-yellow-300">
+          <h2 className="text-2xl font-bold mb-4 text-purple-600 flex items-center">
+            <Rainbow className="mr-3 h-8 w-8" /> Your Subjects
+          </h2>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-20">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             </div>
-          </div>
-
-          {/* Class Overview */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-md font-semibold mb-3">Class Overview</h2>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-indigo-600">{activeUsers.length}</p>
-                <p className="text-sm text-gray-600">Active Classes</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">{subjectRecords.length}</p>
-                <p className="text-sm text-gray-600">Total Students</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-yellow-600">
-                  {activeUsers.length > 0
-                    ? ((activeUsers.length / subjectRecords.length) * 100).toFixed(1)
-                    : '0'}%
-                </p>
-                <p className="text-sm text-gray-600">Average Attendance</p>
-              </div>
-            </div>
-          </div>
-          {/* Assignments */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-md font-semibold mb-3">Assignments</h2>
-            <ul className="space-y-2">
-              <li className="flex justify-between items-center">
-                <span>{selectedSubject?.name || 'No Subject'} Assignment</span>
-                <Dialog open={isAssignmentDialogOpen} onOpenChange={setIsAssignmentDialogOpen}>
+          ) : subjects.length > 0 ? (
+            <div className="flex flex-col space-y-4">
+              <div className="flex space-x-2">
+                <Select
+                  value={selectedSubject?.id || undefined}
+                  onValueChange={handleSubjectChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id || 'placeholder-id'}>
+                        {subject.name} ({subject.subjectCode})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="icon" disabled={!selectedSubject}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the
+                        {selectedSubject?.name} subject and remove all associated data.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteSubject}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <Dialog>
                   <DialogTrigger asChild>
-                    <Button
-                      className="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600"
-                      disabled={!selectedSubject}
-                    >
-                      Create
+                    <Button variant="outline" size="icon" className="bg-green-100 hover:bg-green-200 text-green-600">
+                      <PlusCircle className="h-5 w-5" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                      <DialogTitle>What would you like to create?</DialogTitle>
+                      <DialogTitle>Create New Subject</DialogTitle>
                       <DialogDescription>
-                        Choose the type of assignment you want to create.
+                        Enter the details of the new subject you want to create.
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 gap-4 py-4">
-                      <Card className="cursor-pointer hover:bg-gray-100" onClick={() => handleCreateAssignment('quiz')}>
-                        <CardHeader>
-                          <CardTitle>Quiz</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <CardDescription>
-                            Make assessments and practice motivating with interactive questions
-                          </CardDescription>
-                        </CardContent>
-                      </Card>
-                      <Card className="cursor-pointer hover:bg-gray-100" onClick={() => handleCreateAssignment('activity')}>
-                        <CardHeader>
-                          <CardTitle>Activity</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <CardDescription>
-                            Add fun and interactive slides to assessments that students already love
-                          </CardDescription>
-                        </CardContent>
-                      </Card>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="name" className="text-right">
+                          Name
+                        </Label>
+                        <Input
+                          id="name"
+                          value={newSubjectName}
+                          onChange={(e) => setNewSubjectName(e.target.value)}
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="code" className="text-right">
+                          Code
+                        </Label>
+                        <Input
+                          id="code"
+                          value={newSubjectCode}
+                          readOnly
+                          className="col-span-3 bg-gray-100"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="description" className="text-right">
+                          Description
+                        </Label>
+                        <Textarea
+                          id="description"
+                          value={newSubjectDescription}
+                          onChange={(e) => setNewSubjectDescription(e.target.value)}
+                          className="col-span-3"
+                        />
+                      </div>
                     </div>
+                    <DialogFooter>
+                      <Button onClick={handleCreateSubject}>Create Subject</Button>
+                    </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </li>
-              <li className="flex justify-between items-center">
-                <span>Grade Assignments</span>
-                <button
-                  className="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600"
-                  onClick={() => toast({ title: "Grading Started", description: "You've started grading assignments" })}
-                >
-                  Start
-                </button>
-              </li>
-            </ul>
-          </div>
+              </div>
+              {selectedSubject && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-indigo-700 mb-2">{selectedSubject.name}</h3>
+                  <p className="text-sm text-gray-600 mb-2">Subject Code: {selectedSubject.subjectCode}</p>
+                  <p className="text-sm text-gray-600">{selectedSubject.description || 'No description available.'}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-lg text-gray-600 mb-4">No subjects available</p>
+              <Button onClick={() => setIsCreateSubjectDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+                Create Your First Subject
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Course Overview */}
+          <Card className="bg-gradient-to-br from-blue-100 to-green-100 border-4 border-blue-300">
+            <CardHeader>
+              <CardTitle className="text-blue-600 flex items-center">
+                <Sun className="mr-2 h-6 w-6 text-yellow-400" /> Course Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-blue-100 rounded-lg p-2">
+                  <p className="text-xl font-bold text-blue-600">{activeUsers.length}</p>
+                  <p className="text-xs text-gray-600">Active Students</p>
+                </div>
+                <div className="bg-green-100 rounded-lg p-2">
+                  <p className="text-xl font-bold text-green-600">{subjectRecords.length}</p>
+                  <p className="text-xs text-gray-600">Total Enrolled</p>
+                </div>
+                <div className="bg-yellow-100 rounded-lg p-2">
+                  <p className="text-xl font-bold text-yellow-600">
+                    {activeUsers.length > 0
+                      ? ((activeUsers.length / subjectRecords.length) * 100).toFixed(1)
+                      : '0'}%
+                  </p>
+                  <p className="text-xs text-gray-600">Attendance Rate</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Learning Materials */}
+          <Card className="bg-gradient-to-br from-yellow-100 to-orange-100 border-4 border-yellow-300">
+            <CardHeader>
+              <CardTitle className="text-orange-600 flex items-center">
+                <Cloud className="mr-2 h-6 w-6 text-blue-400" /> Learning Materials
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                <li className="flex justify-between items-center">
+                  <span className="text-sm">Create New Quiz</span>
+                  <Button
+                    size="sm"
+                    onClick={() => handleCreateAssignment('quiz')}
+                    disabled={!selectedSubject}
+                  >
+                    Create
+                  </Button>
+                </li>
+                <li className="flex justify-between items-center">
+                  <span className="text-sm">Upload Lesson Plan</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toast({ title: "Coming Soon", description: "Lesson plan upload will be available in a future update." })}
+                  >
+                    Upload
+                  </Button>
+                </li>
+                <li className="flex justify-between items-center">
+                  <span className="text-sm">Manage Resources</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toast({ title: "Coming Soon", description: "Resource management will be available in a future update." })}
+                  >
+                    Manage
+                  </Button>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
           {/* Student Progress */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-md font-semibold mb-3">Student Progress</h2>
-            <ul className="space-y-2">
-              <li className="flex justify-between items-center">
-                <span>{selectedSubject?.name || 'No Subject'} Progress Report</span>
-                <button
-                  className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
-                  onClick={() => toast({ title: "Report Generated", description: `Progress report for ${selectedSubject?.name || 'No Subject'} has been generated` })}
-                  disabled={!selectedSubject}
-                >
-                  Generate
-                </button>
-              </li>
-              <li className="flex justify-between items-center">
-                <span>Individual Student Assessment</span>
-                <button
-                  className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
-                  onClick={() => toast({ title: "Assessment Tool Opened", description: "Individual student assessment tool is now open" })}
-                >
-                  Open
-                </button>
-              </li>
-            </ul>
-          </div>
+          <Card className="bg-gradient-to-br from-pink-100 to-purple-100 border-4 border-pink-300">
+            <CardHeader>
+              <CardTitle className="text-purple-600 flex items-center">
+                <Stars className="mr-2 h-6 w-6 text-yellow-400" /> Student Progress
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                <li className="flex justify-between items-center">
+                  <span className="text-sm">Generate Progress Report</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toast({ title: "Report Generated", description: `Progress report for ${selectedSubject?.name || 'No Subject'} has been generated` })}
+                    disabled={!selectedSubject}
+                  >
+                    Generate
+                  </Button>
+                </li>
+                <li className="flex justify-between items-center">
+                  <span className="text-sm">View Class Analytics</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toast({ title: "Coming Soon", description: "Class analytics will be available in a future update." })}
+                  >
+                    View
+                  </Button>
+                </li>
+                <li className="flex justify-between items-center">
+                  <span className="text-sm">Individual Assessments</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toast({ title: "Coming Soon", description: "Individual assessments will be available in a future update." })}
+                  >
+                    View
+                  </Button>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-200 text-center p-2">
-        <p className="text-xs text-gray-500">&copy; 2024 EduInsight. All rights reserved.</p>
+      <footer className="bg-gradient-to-r from-pink-300 to-purple-300 text-center p-2">
+        <p className="text-sm text-white">&copy; 2024 EduInsight. Spreading joy and knowledge!</p>
       </footer>
 
       <Toaster />
+
+      {/* Add this new Dialog component for creating a subject */}
+      <Dialog open={isCreateSubjectDialogOpen} onOpenChange={setIsCreateSubjectDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Subject</DialogTitle>
+            <DialogDescription>
+              Enter the details of the new subject you want to create.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input
+                id="name"
+                value={newSubjectName}
+                onChange={(e) => setNewSubjectName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="code" className="text-right">
+                Code
+              </Label>
+              <Input
+                id="code"
+                value={newSubjectCode}
+                readOnly
+                className="col-span-3 bg-gray-100"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Description
+              </Label>
+              <Textarea
+                id="description"
+                value={newSubjectDescription}
+                onChange={(e) => setNewSubjectDescription(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreateSubject}>Create Subject</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

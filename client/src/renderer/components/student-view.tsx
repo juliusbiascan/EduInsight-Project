@@ -1,8 +1,7 @@
-import { Activity, ActivityRecord, DeviceUser, Quiz, QuizRecord, Subject } from "@prisma/client";
 import logo from "@/renderer/assets/smnhs_logo.png";
+import { Activity, ActivityRecord, DeviceUser, Quiz, QuizRecord, Subject } from "@prisma/client";
 import { useToast } from "../hooks/use-toast";
-import { WindowIdentifier } from "@/shared/constants";
-import { LogOut } from "lucide-react";
+import { LogOut, RefreshCw } from "lucide-react";
 import { Toaster } from "./ui/toaster";
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
@@ -10,6 +9,12 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { Card, CardContent, CardHeader, CardTitle } from "@/renderer/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/renderer/components/ui/avatar"
+import { Book, ChevronDown, PlusCircle } from "lucide-react";
+import { Badge } from "./ui/badge";
+import { Progress } from "@/renderer/components/ui/progress";
+import { Rainbow, Sun, Cloud, Stars } from "lucide-react";
 
 interface StudentViewProps {
   user: DeviceUser;
@@ -27,6 +32,8 @@ export const StudentView: React.FC<StudentViewProps> = ({
   const [selectedSubject, setSelectedSubject] = useState<(Subject & { quizzes: Quiz[], activities: Activity[], quizRecord: QuizRecord[], activityRecord: ActivityRecord[] }) | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLeavingSubject, setIsLeavingSubject] = useState(false);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchSubjects();
@@ -38,7 +45,7 @@ export const StudentView: React.FC<StudentViewProps> = ({
       setSubjects(data);
 
       if (data.length > 0) {
-        handleSubjectChange(data[0].id.toString());
+        setSelectedSubject(data[0]);
       }
     } catch (error) {
       console.error('Error fetching subjects:', error);
@@ -131,88 +138,77 @@ export const StudentView: React.FC<StudentViewProps> = ({
     api.quiz.play(quizId);
   };
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-indigo-600 text-white p-3 flex justify-between items-center">
-        {/* Logo */}
-        <div className="flex items-center">
-          <img src={logo} alt="EduInsight Logo" className="h-8 w-auto mr-2" />
-          <h1 className="text-lg font-semibold">Student Dashboard</h1>
-        </div>
-        {/* User Info and Settings */}
-        <div className="flex items-center">
-          <img src={user.image || '/default-avatar.png'} alt="User Avatar" className="w-6 h-6 rounded-full mr-2" />
-          <span className="text-sm mr-4">{user.firstName} {user.lastName}</span>
-          <button
-            className="text-white hover:text-gray-200 mr-2"
-            onClick={() => toast({ title: "Settings", description: "Settings panel opened" })}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
-          <button
-            className="text-white hover:text-gray-200 mr-2"
-            onClick={() => window.location.reload()}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-          <button
-            className="text-white hover:text-gray-200 mr-2"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-6 w-6" />
-          </button>
-          <button
-            className="text-white hover:text-gray-200"
-            onClick={() => api.window.hide(WindowIdentifier.Dashboard)}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+  const handleRefresh = () => {
+    window.location.reload();
+    toast({ title: "Refreshed", description: "Page content has been updated." });
+  };
 
-          </button>
+  return (
+    <div className="flex flex-col h-screen bg-gradient-to-b from-blue-100 to-indigo-100">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-blue-400 to-indigo-400 text-white p-3 flex justify-between items-center rounded-b-lg shadow-md">
+        <div className="flex items-center">
+          <img src={logo} alt="EduInsight Logo" className="h-10 w-auto mr-2 rounded-full border-2 border-white" />
+          <h1 className="text-2xl font-bold font-comic-sans">Student's Dashboard</h1>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button variant="ghost" size="sm" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+            <DialogTrigger asChild>
+              <div className="flex items-center cursor-pointer hover:bg-blue-500 rounded-full p-2 transition-colors duration-200">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={user.image || '/default-avatar.png'} alt="User Avatar" />
+                  <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm ml-2 mr-1">{user.firstName} {user.lastName}</span>
+                <ChevronDown className="h-4 w-4" />
+              </div>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Student Information</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Name:</p>
+                  <p className="font-medium">{user.firstName} {user.lastName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Student ID:</p>
+                  <p className="font-medium">{user.schoolId}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Grade:</p>
+                  <p className="font-medium">10th</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Last Login:</p>
+                  <p className="font-medium">May 15, 2024</p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
       {/* Main content */}
       <main className="flex-grow p-4 overflow-y-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* User Info Card */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-md font-semibold mb-3">User Information</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Name:</p>
-                <p className="font-medium">{user.firstName} {user.lastName}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Grade:</p>
-                <p className="font-medium">10th</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Student ID:</p>
-                <p className="font-medium">{user.schoolId}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Last Login:</p>
-                <p className="font-medium">May 15, 2024</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Subject Picker */}
-          <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
-            <h2 className="text-md font-semibold">Select Subject</h2>
-            {subjects.length > 0 ? (
-              <div className="flex-grow mx-4">
+        {/* Subject Selection */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border-2 border-blue-200">
+          <h2 className="text-xl font-bold mb-4 text-indigo-600 flex items-center">
+            <Book className="mr-2 h-6 w-6" /> Your Subjects
+          </h2>
+          {subjects.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex space-x-4 items-center">
                 <Select onValueChange={handleSubjectChange} value={selectedSubject?.id.toString()}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a subject" />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a subject" />
                   </SelectTrigger>
                   <SelectContent>
                     {subjects.map((subject) => (
@@ -222,152 +218,205 @@ export const StudentView: React.FC<StudentViewProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" disabled={!selectedSubject}>Leave Subject</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. You will need to rejoin the subject if you want to access it again.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleLeaveSubject} disabled={isLeavingSubject}>
+                        {isLeavingSubject ? 'Leaving...' : 'Leave Subject'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
-            ) : (
-              <p className="text-gray-500 flex-grow mx-4">No subjects available. Please join a subject first.</p>
-            )}
-            <div className="flex space-x-2">
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => setIsDialogOpen(true)}>Join New Subject</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Join a Subject</DialogTitle>
-                  </DialogHeader>
-                  <div className="flex flex-col space-y-4">
-                    <Input
-                      placeholder="Enter subject code"
-                      value={subjectCode}
-                      onChange={(e) => setSubjectCode(e.target.value)}
-                    />
-                    <Button onClick={handleJoinSubject} disabled={isJoining}>
-                      {isJoining ? 'Joining...' : 'Join Subject'}
-                    </Button>
+              {selectedSubject && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-2">{selectedSubject.name}</h3>
+                  <p className="text-sm text-gray-600 mb-2">Subject Code: {selectedSubject.subjectCode}</p>
+                  <div className="flex space-x-4">
+                    <div>
+                      <span className="text-sm font-medium">Quizzes: </span>
+                      <span className="text-sm">{selectedSubject.quizzes.filter(quiz => quiz.published).length}</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium">Activities: </span>
+                      <span className="text-sm">{selectedSubject.activities.length}</span>
+                    </div>
                   </div>
-                </DialogContent>
-              </Dialog>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" disabled={!selectedSubject}>Leave Subject</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. You will need to rejoin the subject if you want to access it again.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleLeaveSubject} disabled={isLeavingSubject}>
-                      {isLeavingSubject ? 'Leaving...' : 'Leave Subject'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                </div>
+              )}
             </div>
-          </div>
-
-          {/* Progress Overview */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-md font-semibold mb-3">Progress Overview</h2>
-            {selectedSubject ? (
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-indigo-600">{calculateProgress().quizzes}</p>
-                  <p className="text-sm text-gray-600">Quizzes Completed</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">{calculateProgress().activities}</p>
-                  <p className="text-sm text-gray-600">Activities Finished</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-yellow-600">{calculateProgress().overall}%</p>
-                  <p className="text-sm text-gray-600">Overall Progress</p>
-                </div>
+          ) : (
+            <p className="text-gray-500 mb-4">No subjects available. Please join a subject first.</p>
+          )}
+          <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full mt-4 bg-green-100 hover:bg-green-200 text-green-600">
+                <PlusCircle className="h-5 w-5 mr-2" /> Join New Subject
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Join a Subject</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col space-y-4">
+                <Input
+                  placeholder="Enter subject code"
+                  value={subjectCode}
+                  onChange={(e) => setSubjectCode(e.target.value)}
+                />
+                <Button onClick={handleJoinSubject} disabled={isJoining}>
+                  {isJoining ? 'Joining...' : 'Join Subject'}
+                </Button>
               </div>
-            ) : (
-              <p className="text-gray-500">Select a subject to view progress.</p>
-            )}
-          </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Progress Overview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-indigo-600">Progress Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {selectedSubject ? (
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium">Quizzes Completed</span>
+                      <span className="text-sm font-medium">
+                        {calculateProgress().quizzes}/{selectedSubject.quizzes.filter(quiz => quiz.published).length}
+                      </span>
+                    </div>
+                    <Progress value={(calculateProgress().quizzes / selectedSubject.quizzes.filter(quiz => quiz.published).length) * 100} className="h-2" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium">Activities Finished</span>
+                      <span className="text-sm font-medium">
+                        {calculateProgress().activities}/{selectedSubject.activities.length}
+                      </span>
+                    </div>
+                    <Progress value={(calculateProgress().activities / selectedSubject.activities.length) * 100} className="h-2" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium">Overall Progress</span>
+                      <span className="text-sm font-medium">{calculateProgress().overall}%</span>
+                    </div>
+                    <Progress value={calculateProgress().overall} className="h-2" />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-500">Select a subject to view progress.</p>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Quizzes */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-md font-semibold mb-3">Quizzes</h2>
-            {subjects.length > 0 ? (
-              selectedSubject ? (
-                selectedSubject.quizzes.filter(quiz => quiz.published).length > 0 ? (
-                  <ul className="space-y-2">
-                    {selectedSubject.quizzes
-                      .filter(quiz => quiz.published)
-                      .map((quiz) => {
-                        const quizRecord = selectedSubject.quizRecord.find(record => record.quizId === quiz.id && record.userId === user.id);
-                        const isQuizDone = !!quizRecord;
-                        return (
-                          <li key={quiz.id} className="flex justify-between items-center">
-                            <span>{quiz.title}</span>
-                            {isQuizDone ? (
-                              <span className="text-green-500 font-semibold">
-                                Done - Score: {quizRecord.score}/{quizRecord.totalQuestions}
-                              </span>
-                            ) : (
-                              <button
-                                className="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600"
-                                onClick={() => handleStartQuiz(quiz.id)}
-                              >
-                                Start
-                              </button>
-                            )}
-                          </li>
-                        );
-                      })}
-                  </ul>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-indigo-600">Quizzes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {subjects.length > 0 ? (
+                selectedSubject ? (
+                  selectedSubject.quizzes.filter(quiz => quiz.published).length > 0 ? (
+                    <ul className="space-y-4">
+                      {selectedSubject.quizzes
+                        .filter(quiz => quiz.published)
+                        .map((quiz) => {
+                          const quizRecord = selectedSubject.quizRecord.find(record => record.quizId === quiz.id && record.userId === user.id);
+                          const isQuizDone = !!quizRecord;
+                          const score = quizRecord ? (quizRecord.score / quizRecord.totalQuestions) * 100 : 0;
+                          return (
+                            <li key={quiz.id} className="bg-gray-50 rounded-lg p-3 shadow-sm">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="font-semibold">{quiz.title}</span>
+                                <Badge variant={isQuizDone ? "secondary" : "destructive"}>
+                                  {isQuizDone ? "Done" : "Not Done"}
+                                </Badge>
+                              </div>
+                              {isQuizDone && (
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-600">Score:</span>
+                                  <span className="text-sm font-semibold">{quizRecord.score}/{quizRecord.totalQuestions}</span>
+                                </div>
+                              )}
+                              <Progress value={score} className="mt-2" />
+                              {!isQuizDone && (
+                                <Button
+                                  size="sm"
+                                  className="mt-2 w-full"
+                                  onClick={() => handleStartQuiz(quiz.id)}
+                                >
+                                  Start
+                                </Button>
+                              )}
+                            </li>
+                          );
+                        })}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500">No published quizzes available for this subject.</p>
+                  )
                 ) : (
-                  <p className="text-gray-500">No published quizzes available for this subject.</p>
+                  <p className="text-gray-500">Please select a subject to view quizzes.</p>
                 )
               ) : (
-                <p className="text-gray-500">Please select a subject to view quizzes.</p>
-              )
-            ) : (
-              <p className="text-gray-500">Join a subject to view available quizzes.</p>
-            )}
-          </div>
+                <p className="text-gray-500">Join a subject to view available quizzes.</p>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Activities */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-md font-semibold mb-3">Activities</h2>
-            {subjects.length > 0 ? (
-              selectedSubject ? (
-                selectedSubject.activities.length > 0 ? (
-                  <ul className="space-y-2">
-                    {selectedSubject.activities.map((activity) => (
-                      <li key={activity.id} className="flex justify-between items-center">
-                        <span>{activity.name}</span>
-                        <button
-                          className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
-                          onClick={() => toast({ title: "Activity Started", description: `You've started ${activity.name}` })}
-                        >
-                          Begin
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-indigo-600">Activities</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {subjects.length > 0 ? (
+                selectedSubject ? (
+                  selectedSubject.activities.length > 0 ? (
+                    <ul className="space-y-2">
+                      {selectedSubject.activities.map((activity) => (
+                        <li key={activity.id} className="flex justify-between items-center">
+                          <span>{activity.name}</span>
+                          <Button
+                            size="sm"
+                            onClick={() => toast({ title: "Activity Started", description: `You've started ${activity.name}` })}
+                          >
+                            Begin
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500">No activities available for this subject.</p>
+                  )
                 ) : (
-                  <p className="text-gray-500">No activities available for this subject.</p>
+                  <p className="text-gray-500">Please select a subject to view activities.</p>
                 )
               ) : (
-                <p className="text-gray-500">Please select a subject to view activities.</p>
-              )
-            ) : (
-              <p className="text-gray-500">Join a subject to view available activities.</p>
-            )}
-          </div>
+                <p className="text-gray-500">Join a subject to view available activities.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-200 text-center p-2">
+      <footer className="bg-gray-200 text-center p-1">
         <p className="text-xs text-gray-500">&copy; 2024 EduInsight. All rights reserved.</p>
       </footer>
 

@@ -37,7 +37,7 @@ export default function () {
   );
 
   ipcMain.handle(IPCRoute.DATABASE_GET_DEVICE_USER_BY_ACTIVE_USER_ID, (e, userId: string) =>
-    db.deviceUser.findMany({ where: { id: userId } })
+    db.deviceUser.findMany({ where: { id: userId }, include: { subjects: true } })
   );
 
   ipcMain.handle(IPCRoute.DATABASE_GET_ALL_DEVICE_USERS_BY_LAB_ID, (e, labId: string) =>

@@ -1,0 +1,27 @@
+{
+  "name": "eduinsight",
+  "version": "1.0.0",
+  "description": " Computer Lab Monitoring System for Enhanced Learning in San Miguel National Highschool",
+  "scripts": {
+    "client": "cd client && npm start",
+    "server": "cd server && npm run dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juliusbiascan/EduInsight-Project.git"
+  },
+  "keywords": [
+    "nextjs",
+    "electronjs",
+    "prisma",
+    "shadcn",
+    "docker",
+    "reactjs"
+  ],
+  "author": "Julius Biascan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/juliusbiascan/EduInsight-Project/issues"
+  },
+  "homepage": "https://github.com/juliusbiascan/EduInsight-Project#readme"
+}

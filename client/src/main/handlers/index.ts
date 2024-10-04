@@ -10,7 +10,6 @@ import { IPCRoute } from '../../shared/constants';
 
 export { default as IPCWIndowHandler } from './window';
 export { default as IPCUpdaterHandler } from './updater';
-export { default as IPCDeviceHandler } from './device';
 export { default as IPCDatabaseHandler } from './database';
 export { default as IPCQuizHandler } from './quiz';
 /**

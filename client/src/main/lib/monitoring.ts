@@ -4,7 +4,31 @@ import { powerMonitor } from "electron";
 
 let interval: NodeJS.Timeout;
 
-export const setActivityMonitoring = (userId: string, deviceId: string, labId: string): void => {
+
+function getTimeStamp() {
+  const today = new Date();
+  const date =
+    today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate();
+  const time =
+    today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+  const dateTime = date + " " + time;
+
+  return dateTime;
+}
+
+async function pushPowerLogsToDB(pm_status: string, pm_log_ts: string, userId: string, deviceId: string, labId: string) {
+  await db.powerMonitoringLogs.create({
+    data: {
+      pm_status,
+      pm_log_ts,
+      userId,
+      deviceId,
+      labId
+    }
+  })
+}
+
+export function setPowerMonitor(userId: string, deviceId: string, labId: string) {
 
   let currentWindow: number;
 
@@ -33,39 +57,7 @@ export const setActivityMonitoring = (userId: string, deviceId: string, labId: s
       }
     });
   }, 1000);
-}
 
-export const stopActivityMonitoring = (): void => {
-  clearInterval(interval);
-}
-
-
-
-function getTimeStamp() {
-  const today = new Date();
-  const date =
-    today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate();
-  const time =
-    today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
-  const dateTime = date + " " + time;
-
-  return dateTime;
-}
-
-
-async function pushPowerLogsToDB(pm_status: string, pm_log_ts: string, userId: string, deviceId: string, labId: string) {
-  await db.powerMonitoringLogs.create({
-    data: {
-      pm_status,
-      pm_log_ts,
-      userId,
-      deviceId,
-      labId
-    }
-  })
-}
-
-export function setPowerMonitor(userId: string, deviceId: string, labId: string) {
   powerMonitor.on("suspend", () => {
     console.log("The system is going to sleep");
     pushPowerLogsToDB("0", getTimeStamp(), userId, deviceId, labId);
@@ -103,6 +95,7 @@ export function setPowerMonitor(userId: string, deviceId: string, labId: string)
 }
 
 export const stopPowerMonitoring = (): void => {
+  clearInterval(interval);
   powerMonitor.removeAllListeners("suspend");
   powerMonitor.removeAllListeners("resume");
   powerMonitor.removeAllListeners("on-ac");
