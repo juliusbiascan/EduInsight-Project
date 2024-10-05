@@ -2,7 +2,7 @@ import React from 'react';
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { DashboardClient } from './components/dashboard-client';
+import { DashboardClient } from '../../../../components/dashboard-client';
 
 interface DashboardPageProps { params: { labId: string; }; }
 

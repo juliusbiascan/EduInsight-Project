@@ -18,6 +18,7 @@ import is from 'electron-is';
 import { createSocketConnection, getSocketInstance, isSocketConnected } from './lib/socket-manager';
 import * as robot from "@jitsi/robotjs";
 import { Socket } from "socket.io-client";
+
 /**
  * Handles the 'ready' event of the app.
  * Sets up IPC handlers and creates the system tray icon.
@@ -190,6 +191,7 @@ function handleOnActivate() {
       }
     }, 1000);
   });
+  
   app.on('window-all-closed', async () => {
     const device = await db.device.findFirst({
       where: {
@@ -200,6 +202,7 @@ function handleOnActivate() {
       handleAllClosed();
     }
   });
+
   app.on('activate', handleOnActivate);
 
 })();

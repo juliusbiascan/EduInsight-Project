@@ -8,6 +8,7 @@ import { useParams, useRouter } from "next/navigation"
 import { RegistrationColumn, columns } from "./columns"
 import { DataTable } from "@/components/ui/data-table"
 import { ApiList } from "@/components/ui/api-list"
+import React from "react"
 
 interface RegistrationClientProps {
   data: RegistrationColumn[]
@@ -30,7 +31,7 @@ export const RegistrationClient: React.FC<RegistrationClientProps> = ({
         </Button>
       </div>
       <Separator />
-      <DataTable columns={columns} data={data} searchKey="name" />
+      <DataTable columns={columns} data={data} searchKey="name" title={"Device Users"} />
     </>
   )
 }

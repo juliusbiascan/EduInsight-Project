@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { RecentUsersType } from "./recent-users";
 import { getTotalDevices } from "@/data/device";
 import { getActiveCount } from "@/actions/staff";
 import { getAllDeviceUserCount } from "@/data/user";
@@ -9,12 +8,19 @@ import { getGraphLogins, getRecentLogins } from "@/data/get-graph-count";
 import { DateRange } from "react-day-picker";
 import { addDays, format } from 'date-fns';
 import { getPreviousStats } from "@/data/stats";
-import { StatsOverview } from './stats-overview';
-import { DashboardTabs } from './dashboard-tabs';
 import { CalendarDateRangePicker } from "@/components/date-range-picker";
 import { Button } from "@/components/ui/button";
-import { Rainbow, Sparkles, Download } from "lucide-react";
-import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Rainbow, Download, Activity, Laptop, TrendingUp, Users } from "lucide-react";
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RecentUsers, RecentUsersType } from "./recent-users";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AnalyticsTabs } from "./analytics-tabs";
+import { ReportsContent } from './reports-contents';
+import { Heart, Sparkles } from "lucide-react";
+import { Overview } from "./overview";
+import { StatsCard } from './stats-card';
+import { DashboardReport } from './dashboard-report';
 
 interface DashboardPageProps { params: { labId: string; }; }
 
@@ -45,27 +51,6 @@ interface DashboardData {
   };
 }
 
-const styles = StyleSheet.create({
-  page: {
-    flexDirection: 'column',
-    backgroundColor: '#E4E4E4',
-    padding: 30,
-  },
-  section: {
-    margin: 10,
-    padding: 10,
-    flexGrow: 1
-  },
-  title: {
-    fontSize: 24,
-    marginBottom: 10,
-  },
-  text: {
-    fontSize: 12,
-    marginBottom: 5,
-  },
-});
-
 export const DashboardClient: React.FC<DashboardPageProps> = ({ params }) => {
 
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -94,7 +79,7 @@ export const DashboardClient: React.FC<DashboardPageProps> = ({ params }) => {
       getAllDeviceUserCount(params.labId, newDateRange),
       getGraphLogins(params.labId, newDateRange),
       getRecentLogins(params.labId, newDateRange),
-      getPreviousStats(params.labId)
+      getPreviousStats(params.labId, newDateRange)
     ]);
 
     setData({
@@ -139,21 +124,13 @@ export const DashboardClient: React.FC<DashboardPageProps> = ({ params }) => {
     };
   }, [data.recentLogin.length, data.allUser, data.allDevices, data.activeCount, dateRange]);
 
-  const DashboardReport: React.FC<{ data: ReturnType<typeof generateReportData> }> = ({ data }) => (
-    <Document>
-      <Page size="A4" style={styles.page}>
-        <View style={styles.section}>
-          <Text style={styles.title}>Dashboard Report</Text>
-          <Text style={styles.text}>Date Range: {format(data.dateRange.from!, 'PP')} - {format(data.dateRange.to!, 'PP')}</Text>
-          <Text style={styles.text}>Total Logins: {data.totalLogins}</Text>
-          <Text style={styles.text}>Total Users: {data.totalUsers}</Text>
-          <Text style={styles.text}>Total Devices: {data.totalDevices}</Text>
-          <Text style={styles.text}>Active Now: {data.activeNow}</Text>
-        </View>
-      </Page>
-    </Document>
-  );
 
+  const calculateTrend = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0; // If previous was 0, return 100% if current is positive, 0% otherwise
+    const trend = ((current - previous) / previous) * 100;
+    return Number(trend.toFixed(2)); // Round to 2 decimal places
+  };
+  
   return (
     <div className="p-4 space-y-4 bg-gradient-to-br from-pink-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
       <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
@@ -182,20 +159,68 @@ export const DashboardClient: React.FC<DashboardPageProps> = ({ params }) => {
         </div>
       </div>
 
-      <StatsOverview
-        totalLogins={data.recentLogin.length}
-        totalUsers={data.allUser}
-        totalDevices={data.allDevices}
-        activeNow={data.activeCount}
-        previousStats={data.previousStats}
-      />
+      <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
+        <StatsCard
+          title="Total Logins"
+          value={data.recentLogin.length}
+          icon={<TrendingUp className="h-4 w-4" />}
+          trend={calculateTrend(data.recentLogin.length, data.previousStats.totalLogins)}
+        />
+        <StatsCard
+          title="Total Users"
+          value={data.allUser}
+          icon={<Users className="h-4 w-4" />}
+          trend={calculateTrend(data.allUser, data.previousStats.totalUsers)}
+        />
+        <StatsCard
+          title="Total Devices"
+          value={data.allDevices}
+          icon={<Laptop className="h-4 w-4" />}
+          trend={calculateTrend(data.allDevices, data.previousStats.totalDevices)}
+        />
+        <StatsCard
+          title="Active Now"
+          value={data.activeCount}
+          icon={<Activity className="h-4 w-4" />}
+          trend={calculateTrend(data.activeCount, data.previousStats.activeNow)}
+        />
+      </div>
 
-      <DashboardTabs
-        graphLogin={data.graphLogin}
-        recentLogins={formattedRecentLogin}
-        labId={params.labId}
-        dateRange={dateRange}
-      />
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList className="justify-start bg-white dark:bg-gray-800 rounded-full p-1 shadow-sm">
+          <TabsTrigger value="overview" className="rounded-full">Overview</TabsTrigger>
+          <TabsTrigger value="analytics" className="rounded-full">Analytics</TabsTrigger>
+          <TabsTrigger value="reports" className="rounded-full">Reports</TabsTrigger>
+          <TabsTrigger value="notifications" disabled className="rounded-full">Notifications</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <Card className="overflow-hidden border border-pink-200 dark:border-pink-700 shadow-sm lg:flex-grow">
+              <CardHeader className="pb-2 bg-gradient-to-r from-pink-100 to-blue-100 dark:from-pink-900 dark:to-blue-900">
+                <CardTitle className="text-base flex items-center">
+                  <Heart className="h-4 w-4 text-pink-500 dark:text-pink-400 mr-2" /> Login Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-2"><Overview data={data.graphLogin} /></CardContent>
+            </Card>
+            <Card className="overflow-hidden border border-blue-200 dark:border-blue-700 shadow-sm lg:w-1/3">
+              <CardHeader className="pb-2 bg-gradient-to-r from-blue-100 to-pink-100 dark:from-blue-900 dark:to-pink-900">
+                <CardTitle className="text-base flex items-center">
+                  <Sparkles className="h-4 w-4 text-blue-500 dark:text-blue-400 mr-2" /> Recent Logins
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-2"><RecentUsers data={formattedRecentLogin} /></CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        <TabsContent value="analytics" className="space-y-4">
+          <AnalyticsTabs labId={params.labId} dateRange={dateRange} />
+        </TabsContent>
+        <TabsContent value="reports" className="space-y-4">
+          <ReportsContent labId={params.labId} dateRange={dateRange} />
+        </TabsContent>
+        <TabsContent value="notifications" className="space-y-4">{/* Add notifications content here */}</TabsContent>
+      </Tabs>
     </div>
   );
 }

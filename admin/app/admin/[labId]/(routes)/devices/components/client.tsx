@@ -3,7 +3,6 @@
 import React from 'react'
 import { Button } from "@/components/ui/button"
 import { Heading } from "@/components/ui/heading"
-import { Separator } from "@/components/ui/separator"
 import { Plus, Laptop, Zap } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { DeviceColumn, columns } from "./columns"

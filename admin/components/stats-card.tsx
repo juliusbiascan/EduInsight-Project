@@ -10,13 +10,12 @@ interface StatsCardProps {
   title: string;
   value: number;
   icon: React.ReactNode;
-  trend: number;
+  trend?: number;
   description?: string;
 }
 
 export const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, trend, description }) => {
-  const trendColor = trend >= 0 ? "text-green-600" : "text-red-600";
-  const trendIcon = trend >= 0 ? "↑" : "↓";
+  const trendIcon = trend && trend >= 0 ? "↑" : "↓";
 
   return (
     <motion.div
@@ -33,24 +32,26 @@ export const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, trend,
         <CardContent className="pt-4">
           <div className="flex flex-col items-start space-y-2">
             <div className="text-4xl font-bold text-foreground">{value.toLocaleString()}</div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <motion.span
-                    className={cn("text-sm font-semibold px-2 py-1 rounded-full",
-                      trend >= 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    {trendIcon} {Math.abs(trend)}%
-                  </motion.span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{`${Math.abs(trend)}% ${trend >= 0 ? 'increase' : 'decrease'} from last period`}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {trend !== undefined && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <motion.span
+                      className={cn("text-sm font-semibold px-2 py-1 rounded-full",
+                        trend >= 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      {trendIcon} {Math.abs(trend)}%
+                    </motion.span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{`${Math.abs(trend)}% ${trend >= 0 ? 'increase' : 'decrease'} from last period`}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           {description && (
             <motion.p

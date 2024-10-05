@@ -35,7 +35,6 @@ export const AnalyticsTabs: React.FC<AnalyticsTabsProps> = ({ labId, dateRange }
       setDeviceUsageStats(deviceStats);
       setUserActivityStats(userStats);
     };
-
     fetchData();
   }, [labId, dateRange]);
 

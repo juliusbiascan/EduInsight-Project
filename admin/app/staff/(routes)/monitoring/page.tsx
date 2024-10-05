@@ -23,12 +23,7 @@ const Monitoring = async () => {
 
   const labId = user.labId
 
-  return (
-    <div className="flex-col">
-      <div className="flex-1 p-8 pt-6 space-y-4">
-        <MonitoringClient labId={labId} />
-      </div>
-    </div>
+  return (<MonitoringClient labId={labId} />
   );
 }
 

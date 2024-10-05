@@ -46,8 +46,8 @@ const PowerLogsPage = async () => {
         <div className="flex items-center">
           <Rainbow className="h-6 w-6 text-pink-500 dark:text-pink-400 mr-2" />
           <Heading
-            title="Power Monitoring Logs"
-            description="View Power Logs of this lab"
+            title="User Activity History"
+            description="View Activity History of Users of this lab"
             className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-blue-500 dark:from-pink-400 dark:to-blue-400"
           />
         </div>

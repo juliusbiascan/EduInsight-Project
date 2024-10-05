@@ -1,20 +1,9 @@
 import {
-  AlertCircle,
-  Archive,
-  ArchiveX,
   File,
   Inbox,
-  MessagesSquare,
-  Send,
-  ShoppingCart,
-  Trash2,
-  Users2,
-  Receipt,
   LucideIcon,
   PanelsTopLeft,
   Monitor,
-  Eye,
-  UserPlus,
   UserPlus2,
 } from "lucide-react"
 
@@ -66,11 +55,6 @@ export const sidebarItems: SidebarItem[] = [
     title: "Auth",
     icon: UserPlus2,
     children: [{ title: "Registration", route: `${basePath}/registration` }],
-  },
-  {
-    title: "Drafts",
-    icon: File,
-    route: "drafts",
   },
   { heading: "@ EduInsight 2024" },
 ]

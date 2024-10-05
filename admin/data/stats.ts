@@ -2,27 +2,25 @@
 
 import { db } from "@/lib/db";
 import { DateRange } from "react-day-picker";
-import { addDays } from 'date-fns';
+import { subDays } from 'date-fns';
 import { State } from "@prisma/client";
 
-export async function getPreviousStats(labId: string): Promise<{
+export async function getPreviousStats(labId: string, dateRange: DateRange): Promise<{
   totalLogins: number;
   totalUsers: number;
   totalDevices: number;
   activeNow: number;
 }> {
-  const previousDateRange: DateRange = {
-    from: addDays(new Date(), -60), // 60 days ago
-    to: addDays(new Date(), -30),   // 30 days ago
-  };
+  const previousFrom = subDays(dateRange.from!, 1);
+  const previousTo = subDays(dateRange.to!, 1);
 
   const [totalLogins, totalUsers, totalDevices, activeNow] = await Promise.all([
     db.activeUserLogs.count({
       where: {
         labId: labId,
         createdAt: {
-          gte: previousDateRange.from,
-          lte: previousDateRange.to,
+          gte: previousFrom,
+          lte: previousTo,
         },
       },
     }),
@@ -30,7 +28,7 @@ export async function getPreviousStats(labId: string): Promise<{
       where: {
         labId: labId,
         createdAt: {
-          lte: previousDateRange.to,
+          lte: previousTo,
         },
       },
     }),
@@ -38,14 +36,16 @@ export async function getPreviousStats(labId: string): Promise<{
       where: {
         labId: labId,
         createdAt: {
-          lte: previousDateRange.to,
+          lte: previousTo,
         },
       },
     }),
     db.activeDeviceUser.count({
       where: {
         labId: labId,
-        createdAt: previousDateRange.to,
+        createdAt: {
+          lte: previousTo,
+        },
         state: State.ACTIVE,
       },
     }),

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CalendarIcon } from "@radix-ui/react-icons"
+import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { DateRange } from "react-day-picker"
 
@@ -28,13 +28,15 @@ export function CalendarDateRangePicker({
         <PopoverTrigger asChild>
           <Button
             id="date"
-            variant={"outline"}
+            variant="outline"
+            size="sm"
             className={cn(
               "w-[260px] justify-start text-left font-normal",
-              !value && "text-muted-foreground"
+              !value && "text-muted-foreground",
+              "bg-white dark:bg-gray-800 border-pink-200 dark:border-pink-700 hover:bg-pink-50 dark:hover:bg-pink-900"
             )}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
+            <CalendarIcon className="mr-2 h-4 w-4 text-pink-500 dark:text-pink-400" />
             {value?.from ? (
               value.to ? (
                 <>
@@ -45,7 +47,7 @@ export function CalendarDateRangePicker({
                 format(value.from, "LLL dd, y")
               )
             ) : (
-              <span>Pick a date</span>
+              <span>Pick a date range</span>
             )}
           </Button>
         </PopoverTrigger>
@@ -57,6 +59,7 @@ export function CalendarDateRangePicker({
             selected={value}
             onSelect={onChange}
             numberOfMonths={2}
+            className="bg-white dark:bg-gray-800 border border-pink-200 dark:border-pink-700 rounded-md shadow-sm"
           />
         </PopoverContent>
       </Popover>

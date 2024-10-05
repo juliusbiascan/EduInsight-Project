@@ -75,7 +75,8 @@ export const clockIn = async (values: z.infer<typeof ClockInSchema>) => {
   await db.activeUserLogs.create({
     data: {
       labId: device.labId,
-      userId: user.userId
+      userId: user.userId,
+      deviceId: device.id
     }
   });
 
