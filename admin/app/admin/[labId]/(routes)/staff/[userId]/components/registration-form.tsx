@@ -2,10 +2,8 @@
 
 import { useState } from 'react'
 import * as z from 'zod'
-import { Heading } from "@/components/ui/heading";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Trash } from "lucide-react";
+import { Trash, UserPlus, Save } from "lucide-react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -13,9 +11,9 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
-import { AlertModal } from '@/components/modals/alert-modal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { User } from '@prisma/client';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface RegistrationFormProps {
   initialData: User | null;
@@ -24,7 +22,6 @@ interface RegistrationFormProps {
 const formSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
-  password: z.string().min(6),
   isTwoFactorEnabled: z.boolean().default(false).optional()
 })
 
@@ -37,11 +34,10 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const params = useParams();
   const router = useRouter();
 
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const title = initialData ? 'Edit StaffS' : 'Register Staff'
-  const description = initialData ? 'Edit a staff' : 'Add a new staff'
+  const title = initialData ? 'Edit Staff' : 'Register Staff'
+  const description = initialData ? 'Edit a staff member' : 'Add a new staff member'
   const toastMessage = initialData ? 'Staff updated.' : 'Staff created.'
   const action = initialData ? 'Save changes' : 'Register'
 
@@ -50,12 +46,10 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     defaultValues: initialData ? {
       name: initialData.name!,
       email: initialData.email!,
-      password: initialData.password!,
       isTwoFactorEnabled: initialData.isTwoFactorEnabled!,
     } : {
       name: '',
       email: '',
-      password: '',
       isTwoFactorEnabled: false
     }
   });
@@ -63,7 +57,6 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const onSubmit = async (data: RegistrationFormValues) => {
     try {
       setLoading(true);
-      console.log('test');
       if (initialData) {
         await axios.patch(`/api/${params.labId}/users/${params.userId}`, data)
       } else {
@@ -72,9 +65,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       router.push(`/admin/${params.labId}/staff`);
       toast.success(toastMessage)
       router.refresh();
-
-    } catch (err) {
-      toast.error("Something went wrong.");
+    } catch (error: any) {
+      toast.error(`Something Went Wrong: ${error.message}`);
     } finally {
       setLoading(false)
     }
@@ -88,103 +80,90 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       toast.success("Account deleted.")
       router.refresh();
     } catch (err) {
-      toast.error("Something Went Wrong.");
+      toast.error(`Something Went Wrong: ${err}`);
     } finally {
-      setLoading(false)
-      setOpen(false);
+      setLoading(false);
     }
   }
 
   return (
-    <>
-      <AlertModal
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        onConfirm={onDelete}
-        loading={loading}
-      />
-      <div className="flex items-center justify-between">
-        <Heading title={title} description={description} />
-        {initialData && (
-          <Button variant="destructive" size="sm" onClick={() => setOpen(true)} disabled={loading}>
-            <Trash className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
-      <Separator />
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-8">
-
-          <div className='grid grid-cols-3 gap-8'>
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input disabled={loading} placeholder='Name' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input disabled={loading} placeholder='Email' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input disabled={loading} placeholder='Password' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <Card className="w-full max-w-2xl mx-auto overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl">
+      <CardHeader className="bg-gradient-to-r from-pink-400 to-purple-500 text-white p-6">
+        <CardTitle className="text-2xl font-bold flex items-center gap-2">
+          {initialData ? <Save className="w-6 h-6" /> : <UserPlus className="w-6 h-6" />}
+          {title}
+        </CardTitle>
+        <p className="text-pink-100">{description}</p>
+      </CardHeader>
+      <CardContent className="p-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-purple-600">Name</FormLabel>
+                    <FormControl>
+                      <Input disabled={loading} placeholder='Enter name' {...field} className="border-2 border-pink-200 focus:border-purple-400 rounded-lg" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-purple-600">Email</FormLabel>
+                    <FormControl>
+                      <Input disabled={loading} placeholder='Enter email' {...field} className="border-2 border-pink-200 focus:border-purple-400 rounded-lg" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
               name="isTwoFactorEnabled"
               render={({ field }) => (
-                <FormItem className='flex flex-row items-start p-4 space-x-3 space-y-0 border rounded-md'>
+                <FormItem className='flex flex-row items-start p-4 space-x-3 space-y-0 border-2 border-pink-200 rounded-lg'>
                   <FormControl>
                     <Checkbox
-                      // @ts-ignore
                       checked={field.value}
                       onCheckedChange={field.onChange}
+                      className="border-purple-400 text-purple-600"
                     />
                   </FormControl>
                   <div className='space-y-1 leading-none'>
-                    <FormLabel>
-                      2FA
+                    <FormLabel className="text-purple-600">
+                      Two-Factor Authentication
                     </FormLabel>
                     <FormDescription>
-                      Two factor authentication
+                      Enable for enhanced security
                     </FormDescription>
                   </div>
                 </FormItem>
               )}
             />
-          </div>
-          <Button disabled={loading} className='ml-auto' type='submit'>{action}</Button>
-        </form>
-      </Form>
-      <Separator />
-    </>
+
+            <div className="flex justify-between items-center pt-6">
+              {initialData && (
+                <Button variant="destructive" size="sm" onClick={onDelete} disabled={loading} className="bg-pink-500 hover:bg-pink-600">
+                  <Trash className="w-4 h-4 mr-2" /> Delete Account
+                </Button>
+              )}
+              <Button disabled={loading} type='submit' className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white">
+                {loading ? 'Processing...' : action}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   )
 }

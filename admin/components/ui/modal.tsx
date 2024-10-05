@@ -1,6 +1,8 @@
 "use client";
 
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+// Import useTheme hook for dark mode support
+import { useTheme } from "next-themes";
 
 interface ModalProps {
   title: string;
@@ -17,6 +19,9 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   children
 }) => {
+  // Add useTheme hook
+  const { theme } = useTheme();
+
   const onChange = (open: boolean) => {
     if (!open) {
       onClose();
@@ -25,14 +30,37 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className={`
+        sm:max-w-[425px] 
+        ${theme === 'dark' 
+          ? 'bg-gradient-to-br from-purple-900 to-indigo-900 text-white' 
+          : 'bg-gradient-to-br from-pink-100 to-purple-100 text-gray-800'
+        } 
+        rounded-lg shadow-lg 
+        transition-all duration-300 ease-in-out
+        transform hover:scale-105
+      `}>
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-2xl font-bold 
+            ${theme === 'dark' ? 'text-purple-300' : 'text-purple-800'}
+          ">
+            {title}
+          </DialogTitle>
+          <DialogDescription className={`
+            text-sm 
+            ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}
+          `}>
             {description}
           </DialogDescription>
         </DialogHeader>
-        <div>
+        <div className={`
+          mt-4 p-4 rounded-md
+          ${theme === 'dark' 
+            ? 'bg-gray-800 bg-opacity-50' 
+            : 'bg-white bg-opacity-50'
+          }
+          transition-all duration-300 ease-in-out
+        `}>
           {children}
         </div>
       </DialogContent>

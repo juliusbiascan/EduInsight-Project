@@ -4,30 +4,30 @@ import { NextResponse } from "next/server"
 
 export async function GET(
   req: Request,
-  { params }: { params: { devId: string } }
+  { params }: { params: { userId: string } }
 ) {
   try {
 
-    if (!params.devId) {
-      return new NextResponse("Device id is required", { status: 400 });
+    if (!params.userId) {
+      return new NextResponse("User id is required", { status: 400 });
     }
 
-    const device = await db.device.findUnique({
+    const user = await db.user.findUnique({
       where: {
-        id: params.devId,
+        id: params.userId,
       },
     })
 
-    return NextResponse.json(device);
+    return NextResponse.json(user);
   } catch (err) {
-    console.log('[DEVICE_GET]', err)
+    console.log('[USER_GET]', err)
     return new NextResponse('Internal error', { status: 500 })
   }
 }
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { labId: string, devId: string } }
+  { params }: { params: { labId: string, userId: string } }
 ) {
   try {
 
@@ -43,31 +43,22 @@ export async function PATCH(
 
     const {
       name,
-      devId,
-      devHostname,
-      devMACaddress,
-      isArchived
+      email,
+      isTwoFactorEnabled
     } = body;
 
     if (!id) {
-      return new NextResponse("Unauthenticated", { status: 401 })
+      return new Response("Unauthenticated", { status: 401 });
     }
-
     if (!name) {
-      return new NextResponse("Name is required", { status: 400 });
+      return new Response("Name is required", { status: 400 });
+    }
+    if (!email) {
+      return new Response("Email is required", { status: 400 });
     }
 
-    if (!devId) new NextResponse("DevId is required", { status: 400 });
-
-    if (!devHostname) new NextResponse("Hostname is required", { status: 400 });
-
-    if (!devMACaddress) new NextResponse("Device MAC Address id is required", { status: 400 });
-
-    if (!isArchived) new NextResponse("Archived is required", { status: 400 });
-
-
-    if (!params.devId) {
-      return new NextResponse("Product id is required", { status: 400 });
+    if (!params.userId) {
+      return new NextResponse("User id is required", { status: 400 });
     }
 
     const labByUserId = await db.labaratory.findFirst({
@@ -81,17 +72,16 @@ export async function PATCH(
       return new NextResponse("Unauthorized", { status: 403 });
     }
 
-    const device = await db.device.update({
+    const device = await db.user.update({
       where: {
-        id: params.devId
+        id: params.userId
       },
       data: {
         name,
-        devId,
-        devHostname,
-        devMACaddress,
-        isArchived,
-        labId: params.labId
+        email,
+        isTwoFactorEnabled,
+        labId: params.labId,
+        emailVerified: new Date(),
       }
     })
 
@@ -107,7 +97,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { labId: string, devId: string } }
+  { params }: { params: { labId: string, userId: string } }
 ) {
   try {
 
@@ -123,7 +113,7 @@ export async function DELETE(
       return new NextResponse("Unauthenticated", { status: 401 })
     }
 
-    if (!params.devId) {
+    if (!params.userId) {
       return new NextResponse("Device id is required", { status: 400 });
     }
 
@@ -138,15 +128,15 @@ export async function DELETE(
       return new NextResponse("Unauthorized", { status: 403 });
     }
 
-    const device = await db.device.deleteMany({
+    const user = await db.user.deleteMany({
       where: {
-        id: params.devId,
+        id: params.userId,
       }
     })
 
-    return NextResponse.json(device);
+    return NextResponse.json(user);
   } catch (err) {
-    console.log('[DEVICE_DELETE]', err)
+    console.log('[USER_DELETE]', err)
     return new NextResponse('Internal error', { status: 500 })
   }
 }

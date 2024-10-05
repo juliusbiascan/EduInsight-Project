@@ -1,4 +1,5 @@
 import { CheckCircledIcon } from "@radix-ui/react-icons";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface FormSuccessProps {
   message?: string;
@@ -10,9 +11,11 @@ export const FormSuccess = ({
   if (!message) return null;
 
   return (
-    <div className="bg-emerald-500/15 p-3 rounded-md flex items-center gap-x-2 text-sm text-emerald-500">
-      <CheckCircledIcon className="h-4 w-4" />
-      <p>{message}</p>
-    </div>
+    <Card className="bg-green-50 border border-green-200 text-green-800 rounded-md shadow-sm">
+      <CardContent className="flex items-center p-4">
+        <CheckCircledIcon className="h-5 w-5 mr-3 text-green-400" />
+        <span className="text-sm font-medium">{message}</span>
+      </CardContent>
+    </Card>
   );
 };

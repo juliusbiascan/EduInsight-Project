@@ -66,11 +66,13 @@ export default function LabSwitcher({ className, items = [] }: LabSwitcherProps)
             className={cn("relative w-full justify-between text-sm text-muted-foreground sm:pr-12 md:w-48 lg:w-64",
               className, "rounded-full border-2 border-primary/20 bg-primary/10 hover:bg-primary/20 transition-all duration-300")}
           >
-            <Avatar className="w-6 h-6 mr-2">
-              <HomeIcon className="h-4 w-4 text-primary" />
-            </Avatar>
-            <span className="font-medium text-primary">{currentLab?.label || "Select Lab"}</span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 text-primary/60" />
+            <div className="flex items-center">
+              <Avatar className="w-6 h-6 mr-2">
+                <HomeIcon className="h-4 w-4 text-primary" />
+              </Avatar>
+              <span className="font-medium text-primary">{currentLab?.label || "Select Lab"}</span>
+            </div>
+            <ChevronsUpDown className="h-4 w-4 text-primary/60" />
           </Button>
         </motion.div>
       </PopoverTrigger>
@@ -95,7 +97,7 @@ export default function LabSwitcher({ className, items = [] }: LabSwitcherProps)
                     <Avatar className="w-6 h-6 mr-2">
                       <HomeIcon className="h-3 w-3" />
                     </Avatar>
-                    {lab.label}
+                    <span>{lab.label}</span>
                     {currentLab?.value === lab.value && (
                       <Check className="ml-auto h-4 w-4 text-primary" />
                     )}
@@ -114,8 +116,10 @@ export default function LabSwitcher({ className, items = [] }: LabSwitcherProps)
                 }}
                 className="rounded-md hover:bg-primary/10 transition-colors duration-200"
               >
-                <PlusCircle className="mr-2 h-5 w-5 text-primary" />
-                <span className="font-medium">New Lab</span>
+                <div className="flex items-center">
+                  <PlusCircle className="mr-2 h-5 w-5 text-primary" />
+                  <span className="font-medium">New Lab</span>
+                </div>
               </CommandItem>
             </CommandGroup>
           </CommandList>

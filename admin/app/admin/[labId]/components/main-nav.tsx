@@ -24,13 +24,8 @@ export function MainNav({
         },
         {
             href: `/admin/${params.labId}/staff`,
-            label: 'Manage Staff',
+            label: 'Staffs',
             active: pathname === `/admin/${params.labId}/staff`,
-        },
-        {
-            href: `/admin/${params.labId}/controlpanel`,
-            label: 'Control Panel',
-            active: pathname === `/admin/${params.labId}/controlpanel`,
         },
         {
             href: `/admin/${params.labId}/settings`,

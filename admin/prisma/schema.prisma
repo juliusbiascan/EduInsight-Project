@@ -130,11 +130,13 @@ model DeviceUser {
 }
 
 model ActiveDeviceUser {
-  id       String @id @default(uuid())
-  labId    String
-  userId   String
-  deviceId String
-  state    State  @default(INACTIVE)
+  id        String   @id @default(uuid())
+  labId     String
+  userId    String
+  deviceId  String
+  state     State    @default(INACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ActiveUserLogs {

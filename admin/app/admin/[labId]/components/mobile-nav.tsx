@@ -38,11 +38,6 @@ export const MobileNav: React.FC<MobileNavProps> = ({ children }) => {
       active: pathname === `/admin/${params.labId}/staff`,
     },
     {
-      href: `/admin/${params.labId}/controlpanel`,
-      label: 'Control Panel',
-      active: pathname === `/admin/${params.labId}/controlpanel`,
-    },
-    {
       href: `/admin/${params.labId}/settings`,
       label: 'Settings',
       active: pathname === `/admin/${params.labId}/settings`,

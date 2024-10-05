@@ -1,15 +1,20 @@
+"use server"
 import { db } from "@/lib/db";
-import toast from "react-hot-toast";
+import { DateRange } from "react-day-picker";
 
 interface GraphData {
   name: string;
   total: number;
 }
 
-export const getRecentLogins = async (labId: string) => {
+export const getRecentLogins = async (labId: string, dateRange?: DateRange) => {
   const userLogs = await db.activeUserLogs.findMany({
     where: {
       labId,
+      createdAt: {
+        gte: dateRange?.from,
+        lte: dateRange?.to,
+      },
     },
     orderBy: {
       createdAt: 'desc'
@@ -19,15 +24,15 @@ export const getRecentLogins = async (labId: string) => {
   return userLogs
 }
 
-export const getGraphLogins = async (labId: string) => {
+export const getGraphLogins = async (labId: string, dateRange?: DateRange) => {
 
   const userLogs = await db.activeUserLogs.findMany({
     where: {
       labId,
-      // createdAt: {
-      //   lte: from,
-      //   gte: to,
-      // }
+      createdAt: {
+        gte: dateRange?.from,
+        lte: dateRange?.to,
+      }
     },
     orderBy: {
       createdAt: 'desc'

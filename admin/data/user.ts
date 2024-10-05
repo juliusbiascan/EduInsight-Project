@@ -1,6 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db";
+import { DateRange } from "react-day-picker";
 
 export const getUserByEmail = async (email: string) => {
   try {
@@ -54,9 +55,17 @@ export const getActiveDeviceUserByUserId = async (userId: string) => {
   }
 }
 
-export const getAllDeviceUserCount = async (labId: string) => {
+export const getAllDeviceUserCount = async (labId: string, dateRange?: DateRange) => {
   try {
-    const user = await db.deviceUser.count({ where: { labId } });
+    const user = await db.deviceUser.count({
+      where: {
+        labId,
+        createdAt: {
+          gte: dateRange?.from,
+          lte: dateRange?.to,
+        },
+      },
+    });
 
     return user;
   } catch {

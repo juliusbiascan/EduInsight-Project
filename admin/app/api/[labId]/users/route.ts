@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
 import { getUserByEmail } from "@/data/user";
-
+import { sendEmail } from "@/lib/mail" // Import email sending function
 import bcrypt from "bcryptjs";
 
 export async function POST(
@@ -23,7 +23,6 @@ export async function POST(
     const {
       name,
       email,
-      password,
       isTwoFactorEnabled
     } = body;
 
@@ -35,9 +34,6 @@ export async function POST(
     }
     if (!email) {
       return new Response("Email is required", { status: 400 });
-    }
-    if (!password) {
-      return new Response("Password is required", { status: 400 });
     }
 
     if (!params.labId) {
@@ -55,6 +51,9 @@ export async function POST(
       return new Response("Unauthorized", { status: 403 });
     }
 
+    // Generate a random password
+    const password = Math.random().toString(36).slice(-8);
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const existingUser = await getUserByEmail(email);
@@ -63,7 +62,19 @@ export async function POST(
       return new Response("Email already in use!", { status: 403 });
     }
 
-    const device = await db.user.create({
+    // Send email with password
+    const emailResponse = await sendEmail({
+      to: email,
+      subject: "Your new account password",
+      html: `<p>Your password is: ${password}</p>`,
+    });
+
+    if (!emailResponse) {
+      return new Response("Failed to send email", { status: 500 });
+    }
+
+    // Create the user in the database
+    const user = await db.user.create({
       data: {
         name,
         email,
@@ -74,7 +85,8 @@ export async function POST(
       }
     })
 
-    return Response.json(device);
+    // Return success response without password
+    return Response.json({ ...user, password: undefined });
 
   } catch (err) {
     console.log(`[DEVICE_POST] ${err}`);

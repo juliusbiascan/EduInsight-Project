@@ -25,6 +25,7 @@ interface DeviceFormProps {
 }
 
 const formSchema = z.object({
+
   name: z.string().min(1),
   devId: z.string().min(1),
   devHostname: z.string().min(1),
@@ -103,107 +104,109 @@ export const DeviceForm: React.FC<DeviceFormProps> = ({
         onConfirm={onDelete}
         loading={loading}
       />
-      <Card className="w-full max-w-3xl mx-auto">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Laptop className="w-6 h-6 text-primary" />
-              <CardTitle>{title}</CardTitle>
-            </div>
-            {initialData && (
-              <Button variant="outline" size="sm" onClick={() => setOpen(true)} disabled={loading}>
-                <Trash className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className='grid grid-cols-1 gap-6 sm:grid-cols-2'>
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input disabled={loading} placeholder='Device Name' {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="devId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Device Id / <b>Client id</b></FormLabel>
-                      <FormControl>
-                        <Input disabled={loading} placeholder='Device Id' {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="devHostname"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hostname</FormLabel>
-                      <FormControl>
-                        <Input disabled={loading} placeholder='Device Hostname' {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="devMACaddress"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>MAC Address</FormLabel>
-                      <FormControl>
-                        <Input disabled={loading} placeholder='Device MAC Address' {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <div className="p-4 space-y-4 bg-gradient-to-br from-pink-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+        <Card className="w-full max-w-3xl mx-auto overflow-hidden border border-pink-200 dark:border-pink-700 shadow-sm">
+          <CardHeader className="pb-2 bg-gradient-to-r from-pink-100 to-blue-100 dark:from-pink-900 dark:to-blue-900">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Laptop className="w-6 h-6 text-primary" />
+                <CardTitle>{title}</CardTitle>
               </div>
-              <FormField
-                control={form.control}
-                name="isArchived"
-                render={({ field }) => (
-                  <FormItem className='flex flex-row items-start p-4 space-x-3 space-y-0 border rounded-md bg-muted'>
-                    <FormControl>
-                      <Checkbox
-                        // @ts-ignore
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className='space-y-1 leading-none'>
-                      <FormLabel>
-                        Archived
-                      </FormLabel>
-                      <FormDescription>
-                        This device will not appear anywhere in the lab.
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-              <Button disabled={loading} className='w-full' type='submit'>{action}</Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+              {initialData && (
+                <Button variant="outline" size="sm" onClick={() => setOpen(true)} disabled={loading}>
+                  <Trash className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </CardHeader>
+          <CardContent className="p-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className='grid grid-cols-1 gap-6 sm:grid-cols-2'>
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input disabled={loading} placeholder='Device Name' {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="devId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Device Id / <b>Client id</b></FormLabel>
+                        <FormControl>
+                          <Input disabled={loading} placeholder='Device Id' {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="devHostname"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hostname</FormLabel>
+                        <FormControl>
+                          <Input disabled={loading} placeholder='Device Hostname' {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="devMACaddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>MAC Address</FormLabel>
+                        <FormControl>
+                          <Input disabled={loading} placeholder='Device MAC Address' {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="isArchived"
+                  render={({ field }) => (
+                    <FormItem className='flex flex-row items-start p-4 space-x-3 space-y-0 border rounded-md bg-muted'>
+                      <FormControl>
+                        <Checkbox
+                          // @ts-ignore
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className='space-y-1 leading-none'>
+                        <FormLabel>
+                          Archived
+                        </FormLabel>
+                        <FormDescription>
+                          This device will not appear anywhere in the lab.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <Button disabled={loading} className='w-full' type='submit'>{action}</Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </>
   )
 }

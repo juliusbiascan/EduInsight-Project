@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { State } from "@prisma/client";
 import { getDeviceUserById } from "./user";
+import { DateRange } from "react-day-picker";
 
 export const getAllDevice = async (labId: string) => {
   try {
@@ -13,9 +14,17 @@ export const getAllDevice = async (labId: string) => {
   }
 };
 
-export const getTotalDevices = async (labId: string) => {
+export const getTotalDevices = async (labId: string, dateRange?: DateRange) => {
   try {
-    const device = await db.device.count({ where: { labId } });
+    const device = await db.device.count({
+      where: {
+        labId,
+        createdAt: {
+          gte: dateRange?.from,
+          lte: dateRange?.to,
+        },
+      },
+    });
     return device;
   } catch {
     return null;
