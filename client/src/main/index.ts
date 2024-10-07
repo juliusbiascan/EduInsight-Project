@@ -16,9 +16,10 @@ import { createSocketConnection, getSocketInstance, isSocketConnected } from './
 import { Socket } from 'socket.io-client';
 import * as robot from "@jitsi/robotjs";
 import { IPCRoute } from '@/shared/constants';
+import StoreManager from '@/main/lib/store';
 import Store from 'electron-store';
 
-const store = new Store();
+const store = StoreManager.getInstance();
 
 /**
  * Handles the 'ready' event of the app.

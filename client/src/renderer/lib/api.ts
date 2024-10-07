@@ -31,6 +31,7 @@ export default {
     getDevice: () => ipcRenderer.invoke(IPCRoute.DATABASE_GET_DEVICE) as Promise<Array<Device>>,
     getDeviceByMac: (macAddress: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_DEVICE_BY_MAC, macAddress) as Promise<Array<Device>>,
     getDeviceById: (id: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_DEVICE_BY_ID, id) as Promise<Array<Device>>,
+    getDeviceUserById: (id: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_DEVICE_USER_BY_ID, id) as Promise<DeviceUser>,
     getActiveUserByDeviceId: (deviceId: string, labId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_ACTIVE_USER_BY_DEVICE_ID_AND_LAB_ID, deviceId, labId) as Promise<Array<ActiveDeviceUser>>,
     getDeviceUserByActiveUserId: (userId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_DEVICE_USER_BY_ACTIVE_USER_ID, userId) as Promise<Array<DeviceUser & { subjects: Subject[] }>>,
     getUserRecentLoginByUserId: (userId: string) => ipcRenderer.invoke(IPCRoute.DATABASE_GET_USER_RECENT_LOGIN_BY_USER_ID, userId) as Promise<Array<ActiveUserLogs>>,

@@ -33,7 +33,7 @@ export enum WindowIdentifier {
  * @enum
  */
 export enum IPCRoute {
-
+  DATABASE_GET_DEVICE_USER_BY_ID = '/database/get_device_user_by_id',
   DATABASE_CHECK_ACTIVE_USER = '/database/check_active_user',
   DATABASE_VERIFY_DEVICE = '/database/verify_device',
 

@@ -1,8 +1,8 @@
 import { ipcMain } from 'electron';
 import { IPCRoute } from '@/shared/constants';
-import Store from 'electron-store';
+import StoreManager from '@/main/lib/store';
 
-const store = new Store();
+const store = StoreManager.getInstance();
 
 export default function () {
 

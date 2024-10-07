@@ -74,25 +74,24 @@ function Index() {
     if (status !== UpdaterStatus.NoUpdates) {
       return;
     }
-    sleep(1000)
+    sleep(500)
       .then(() => {
         setStatus(DatabaseStatus.Connecting);
-        return sleep(1000);
+        return sleep(500);
       })
       .then(() => api.database.connect())
-      .then(() => sleep(1000))
+      .then(() => sleep(500))
       .then(() => {
         setStatus(DatabaseStatus.Connected);
-        return sleep(1000);
+        return sleep(500);
       })
       .then(() => {
         setStatus(DatabaseStatus.Verifying);
         return api.database.verifyDevice();
       })
-      .then(() => sleep(1000))
       .then(() => {
         setStatus(DatabaseStatus.Verified);
-        return sleep(1000);
+        return sleep(500);
       })
       .then(() => {
         return api.database.checkActiveUser();

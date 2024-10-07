@@ -7,9 +7,9 @@ import { Quiz, QuizQuestion, QuizRecord, Subject } from '@prisma/client';
 import { sleep } from '@/shared/utils';
 import { getSocketInstance, reconnectSocket } from '../lib/socket-manager';
 import { Database, WindowManager } from '../lib';
-import Store from 'electron-store';
+import StoreManager from '@/main/lib/store';
 
-const store = new Store();
+const store = StoreManager.getInstance();
 
 export default function () {
   // database connection handlers with faux timeout
@@ -106,6 +106,10 @@ export default function () {
 
   ipcMain.handle(IPCRoute.DATABASE_GET_ACTIVE_USER_BY_DEVICE_ID_AND_LAB_ID, (e, deviceId: string, labId: string) =>
     Database.prisma.activeDeviceUser.findMany({ where: { deviceId, labId } })
+  );
+
+  ipcMain.handle(IPCRoute.DATABASE_GET_DEVICE_USER_BY_ID, (e, id: string) =>
+    Database.prisma.deviceUser.findFirst({ where: { id } })
   );
 
   ipcMain.handle(IPCRoute.DATABASE_GET_DEVICE_USER_BY_ACTIVE_USER_ID, (e, userId: string) =>

@@ -60,6 +60,8 @@ const sharedWindowConfigs: Record<string, Electron.BrowserWindowConstructorOptio
     resizable: false,
     movable: false,
     minimizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
   },
 };
 
@@ -85,18 +87,14 @@ const WINDOW_CONFIGS: Record<string, WindowConfig> = {
     url: WELCOME_WINDOW_WEBPACK_ENTRY,
     options: {
       ...baseWindowConfig,
-      width: 500,
-      height: 100,
+      width: 600,
+      height: 200,
       show: false,
       frame: false,
       resizable: false,
       alwaysOnTop: true,
       transparent: true,
       skipTaskbar: true,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false
-      }
     },
   },
   [WindowIdentifier.Main]: {
@@ -130,6 +128,8 @@ const WINDOW_CONFIGS: Record<string, WindowConfig> = {
       resizable: false,
       minimizable: true,
       maximizable: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
     },
   },
   [WindowIdentifier.Splash]: {
