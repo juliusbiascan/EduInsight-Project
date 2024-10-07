@@ -16,6 +16,7 @@ function QuizPlayer() {
   const [quizId, setQuizId] = useState('');
   const [user, setUser] = useState<DeviceUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [totalPoints, setTotalPoints] = useState(0);
 
   useEffect(() => {
     api.quiz.getQuizId((event: any, quizId: string) => {
@@ -36,7 +37,6 @@ function QuizPlayer() {
               setUser(users[0]);
             }
           }
-
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -48,13 +48,15 @@ function QuizPlayer() {
     fetchUserData();
   }, []);
 
-
   const fetchQuiz = async (quizId: string) => {
     try {
       const fetchedQuiz = await api.database.getQuizById(quizId);
       if (fetchedQuiz && fetchedQuiz.length > 0) {
         setQuiz(fetchedQuiz[0]);
         setTimeLeft(fetchedQuiz[0].questions[0].time);
+        // Calculate total points
+        const total = fetchedQuiz[0].questions.reduce((sum, question) => sum + (question.points || 0), 0);
+        setTotalPoints(total);
       } else {
         throw new Error("Quiz not found");
       }
@@ -71,7 +73,7 @@ function QuizPlayer() {
       setTimeLeft((prevTime) => {
         if (prevTime <= 1) {
           clearInterval(timer);
-
+          handleTimeUp();
         }
         return prevTime - 1;
       });
@@ -79,6 +81,32 @@ function QuizPlayer() {
 
     return () => clearInterval(timer);
   }, [quiz, timeLeft, quizCompleted]);
+
+  const handleTimeUp = () => {
+    updateScore(false); // No points awarded when time is up
+
+    if (currentQuestionIndex < quiz.questions.length - 1) {
+      setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
+      setTimeLeft(quiz.questions[currentQuestionIndex + 1].time);
+      setSelectedAnswer(null);
+    } else {
+      setQuizCompleted(true);
+      if (user && user.role === DeviceUserRole.STUDENT) {
+        saveQuizRecord();
+      }
+    }
+  };
+
+  const updateScore = (isCorrect: boolean) => {
+    if (isCorrect) {
+      setScore((prevScore) => prevScore + (quiz.questions[currentQuestionIndex].points || 0));
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+  };
 
   const handleAnswerSelect = (answer: string) => {
     if (!quiz) return;
@@ -88,14 +116,7 @@ function QuizPlayer() {
 
     setSelectedAnswer(answer);
 
-    if (selectedOption?.isCorrect) {
-      setScore((prevScore) => prevScore + (currentQuestion.points || 0));
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    }
+    updateScore(selectedOption?.isCorrect || false);
 
     setTimeout(() => {
       if (currentQuestionIndex < quiz.questions.length - 1) {
@@ -104,13 +125,13 @@ function QuizPlayer() {
         setSelectedAnswer(null);
       } else {
         setQuizCompleted(true);
-        if (user.role == DeviceUserRole.STUDENT)
-          saveQuizRecord(); // Add this line to save the quiz record
+        if (user && user.role === DeviceUserRole.STUDENT) {
+          saveQuizRecord();
+        }
       }
     }, 1500);
   };
 
-  // Add this new function to save the quiz record
   const saveQuizRecord = async () => {
     if (!quiz || !user) return;
 
@@ -142,7 +163,7 @@ function QuizPlayer() {
           className="bg-white text-gray-800 p-12 rounded-lg shadow-2xl"
         >
           <h1 className="text-5xl font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">Quiz Completed!</h1>
-          <div className="text-7xl font-bold mb-8 text-center">{score} / {quiz.questions.length}</div>
+          <div className="text-7xl font-bold mb-8 text-center">{score} / {totalPoints}</div>
           <p className="text-3xl mb-8 text-center">Great job!</p>
           <button
             className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white px-8 py-4 rounded-full text-xl font-semibold hover:from-purple-600 hover:to-pink-700 transition-all transform hover:scale-105"
@@ -210,6 +231,7 @@ function QuizPlayer() {
           </ul>
         </div>
       </motion.div>
+      <div className="text-xl font-semibold mb-4">Current Score: {score} / {totalPoints}</div>
     </motion.div>
   );
 }

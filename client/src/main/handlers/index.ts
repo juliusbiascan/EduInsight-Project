@@ -12,6 +12,7 @@ export { default as IPCWIndowHandler } from './window';
 export { default as IPCUpdaterHandler } from './updater';
 export { default as IPCDatabaseHandler } from './database';
 export { default as IPCQuizHandler } from './quiz';
+export { default as IPCStoreHandler } from './store'
 /**
  * Register the IPC event handlers.
  *

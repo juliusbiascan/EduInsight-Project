@@ -7,7 +7,7 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 const ForkTsCheckerWebpackPlugin: typeof IForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require('path');
-const assets = ['img', 'html'];
+const assets = ['img'];
 export const plugins = [
   new ForkTsCheckerWebpackPlugin({
     logger: 'webpack-infrastructure',
@@ -19,7 +19,7 @@ export const plugins = [
     return new CopyWebpackPlugin({
       patterns: [
         {
-          from: path.resolve(__dirname, 'src/resources/main', asset),
+          from: path.resolve(__dirname, 'src/main/assets', asset),
           to: path.resolve(__dirname, '.webpack/main', asset)
         }
       ]

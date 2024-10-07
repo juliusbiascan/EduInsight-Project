@@ -73,3 +73,17 @@ export const getAllDeviceUserCount = async (labId: string, dateRange?: DateRange
   }
 }
 
+export const getAllDeviceUser = async (labId: string) => {
+  try {
+    const user = await db.deviceUser.findMany({
+      where: {
+        labId,
+      },
+    });
+
+    return user;
+  } catch {
+    return null;
+  }
+}
+

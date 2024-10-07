@@ -72,6 +72,16 @@ io.on("connection", (socket) => {
     const screenShare = ({ deviceId, screenData }) => {
         socket.to(deviceId).emit('screen-share', { deviceId, screenData });
     };
+    const loginUser = ({ deviceId, userId }) => {
+        console.log("login-user");
+        socket.to(deviceId).emit('login-user', deviceId, userId);
+        socket.broadcast.emit('refresh');
+    };
+    const logoutUser = ({ deviceId, userId }) => {
+        console.log("logout-user");
+        socket.to(deviceId).emit('logout-user', deviceId, userId);
+        socket.broadcast.emit('refresh');
+    };
     socket.on("join-server", joinServer);
     socket.on("mouse-move", mouseMove);
     socket.on("mouse-click", mouseClick);
@@ -81,6 +91,8 @@ io.on("connection", (socket) => {
     socket.on("start-sharing", startSharing);
     socket.on("stop-sharing", stopSharing);
     socket.on("screen-share", screenShare);
+    socket.on("login-user", loginUser);
+    socket.on("logout-user", logoutUser);
     socket.on("disconnect", () => {
         console.log("user disconnected");
     });

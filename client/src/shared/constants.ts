@@ -12,6 +12,7 @@ export enum Database {
  * @enum
  */
 export enum WindowIdentifier {
+  Welcome = 'welcome_window',
   Main = 'main_window',
   Dashboard = 'dashboard_window',
   Down = 'down_window',
@@ -32,10 +33,16 @@ export enum WindowIdentifier {
  * @enum
  */
 export enum IPCRoute {
+
+  DATABASE_CHECK_ACTIVE_USER = '/database/check_active_user',
+  DATABASE_VERIFY_DEVICE = '/database/verify_device',
+
   QUIZ_PLAY = '/quiz/play',
   QUIZ_GET_QUIZ_ID = '/quiz/get_quiz_id',
   DATABASE_PUBLISH_QUIZ = '/database/publish_quiz',
   APP_INFO = '/application/info',
+  DATABASE_CONNECT = '/database/connect',
+  DATABASE_DISCONNECT = '/database/disconnect',
   DATABASE_CHECK_CONNECTION = '/database/check_connection',
   DATABASE_GET_LABS = '/database/get_labs',
   DATABASE_REGISTER_DEVICE = '/database/register_device',
@@ -81,4 +88,15 @@ export enum IPCRoute {
   WINDOW_OPEN = '/window/open',
   WINDOW_HIDE = '/window/hide',
   WINDOW_OPEN_IN_TRAY = '/window/open_in_tray',
+
+  DEVICE_INITIATED = '/device/initiated',
+  DEVICE_VERIFY_HOST_NAME = '/device/verify_host_name',
+  DEVICE_GET_DEVICE_ID = '/device/get_device_id',
+
+  // Add these new routes
+  STORE_GET = '/store/get',
+  STORE_SET = '/store/set',
+  STORE_DELETE = '/store/delete',
+  STORE_CLEAR = '/store/clear',
+  STORE_HAS = '/store/has',
 }

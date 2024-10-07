@@ -18,6 +18,7 @@ import { ActiveDeviceUser, Device, DeviceUser } from "@prisma/client"
 import { getDeviceUserById } from "@/data/user"
 import { getDeviceById } from "@/data/device"
 import { logoutUser } from "@/actions/logout"
+import { useSocket } from "@/providers/socket-provider"
 
 interface DeviceArtworkProps extends React.HTMLAttributes<HTMLDivElement> {
   activeDevice?: ActiveDeviceUser
@@ -42,6 +43,7 @@ export function DeviceArtwork({
   const [user, setUser] = useState<DeviceUser | null>(null)
   const [device, setDevice] = useState<Device | null>(null)
   const [isPending, startTransition] = useTransition()
+  const { socket } = useSocket();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,9 +61,13 @@ export function DeviceArtwork({
 
   const handleLogout = async () => {
     if (activeDevice) {
-      const message = await logoutUser(activeDevice.userId, activeDevice.deviceId)
-      toast.success(message.success)
-      onChanged()
+      logoutUser(activeDevice.userId, activeDevice.deviceId).then((message) => {
+        toast.success(message.success)
+        if (socket) {
+          socket.emit("logout-user", { deviceId: activeDevice.deviceId, userId: activeDevice.userId });
+        }
+        onChanged()
+      })
     }
   }
 

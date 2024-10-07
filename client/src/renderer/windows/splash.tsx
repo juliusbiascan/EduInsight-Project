@@ -12,6 +12,9 @@ import { sleep } from '../../shared/utils';
 enum DatabaseStatus {
   Connecting = 'Connecting to database...',
   Connected = 'Connected.',
+  Verifying = 'Verifying device...',
+  Verified = 'Device verified.',
+  NotRegistered = 'Device not registered.',
 }
 
 /**
@@ -33,7 +36,7 @@ enum UpdaterStatus {
  * @component
  */
 function Index() {
-  const [status, setStatus] = React.useState<DatabaseStatus | UpdaterStatus>(
+  const [status, setStatus] = React.useState<DatabaseStatus | UpdaterStatus | string>(
     UpdaterStatus.Checking
   );
 
@@ -71,23 +74,43 @@ function Index() {
     if (status !== UpdaterStatus.NoUpdates) {
       return;
     }
-
-    sleep(2000)
+    sleep(1000)
       .then(() => {
         setStatus(DatabaseStatus.Connecting);
-        return sleep(2000);
+        return sleep(1000);
+      })
+      .then(() => api.database.connect())
+      .then(() => sleep(1000))
+      .then(() => {
+        setStatus(DatabaseStatus.Connected);
+        return sleep(1000);
       })
       .then(() => {
-
+        setStatus(DatabaseStatus.Verifying);
+        return api.database.verifyDevice();
       })
-      .then(() => sleep(2000))
+      .then(() => sleep(1000))
       .then(() => {
-        return Promise.resolve(setStatus(DatabaseStatus.Connected));
+        setStatus(DatabaseStatus.Verified);
+        return sleep(1000);
       })
-      .then(() => sleep(2000))
       .then(() => {
-        api.window.open(WindowIdentifier.Setup);
+        return api.database.checkActiveUser();
+      })
+      .then(() => {
+        api.device.init();
         api.window.close(WindowIdentifier.Splash);
+      })
+      .catch((error) => {
+        if (error instanceof Error) {
+          console.error("Error during database operations:", error.message);
+        }
+        setStatus(DatabaseStatus.NotRegistered);
+        api.store.delete('deviceId');
+        sleep(2000).then(() => {
+          api.window.open(WindowIdentifier.Setup);
+          api.window.close(WindowIdentifier.Splash);
+        });
       });
   }, [status]);
 

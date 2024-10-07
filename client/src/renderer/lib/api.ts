@@ -21,8 +21,11 @@ export default {
     receive: <T = unknown>(channel: string, listener: (event: IpcRendererEvent, ...args: T[]) => void) => ipcRenderer.on(channel, listener),
   },
   database: {
-    checkConnection: (serverAddress: string) => ipcRenderer.send(IPCRoute.DATABASE_CHECK_CONNECTION, serverAddress),
-    registerDevice: (deviceName: string, labId: string, networkName: string) => ipcRenderer.send(IPCRoute.DATABASE_REGISTER_DEVICE, deviceName, labId, networkName),
+    connect: (id?: string) => ipcRenderer.invoke(IPCRoute.DATABASE_CONNECT, id),
+    disconnect: () => ipcRenderer.invoke(IPCRoute.DATABASE_DISCONNECT),
+    verifyHostName: (hostName: string, id?: string) => ipcRenderer.invoke(IPCRoute.DEVICE_VERIFY_HOST_NAME, hostName, id),
+    verifyDevice: () => ipcRenderer.invoke(IPCRoute.DATABASE_VERIFY_DEVICE),
+    registerDevice: (deviceName: string, labId: string, networkName: string) => ipcRenderer.invoke(IPCRoute.DATABASE_REGISTER_DEVICE, deviceName, labId, networkName),
     getNetworkNames: () => ipcRenderer.invoke(IPCRoute.DATABASE_GET_NETWORK_NAMES) as Promise<Array<string>>,
     getLabs: () => ipcRenderer.invoke(IPCRoute.DATABASE_GET_LABS) as Promise<Array<Labaratory>>,
     getDevice: () => ipcRenderer.invoke(IPCRoute.DATABASE_GET_DEVICE) as Promise<Array<Device>>,
@@ -63,18 +66,21 @@ export default {
     publishQuiz: (quizId: string) => ipcRenderer.send(IPCRoute.DATABASE_PUBLISH_QUIZ, quizId),
     saveQuizRecord: (quizRecord: Omit<QuizRecord, 'id' | 'createdAt' | 'updatedAt'>) =>
       ipcRenderer.invoke(IPCRoute.DATABASE_SAVE_QUIZ_RECORD, quizRecord) as Promise<QuizRecord>,
+
+    checkActiveUser: () => ipcRenderer.invoke(IPCRoute.DATABASE_CHECK_ACTIVE_USER),
   },
   device: {
-    getMacAddress: (callback: (event: IpcRendererEvent, macAddress: string) => void) => ipcRenderer.on('SET_MAC', callback),
-    getUserState: (callback: (event: IpcRendererEvent, state: number) => void) => ipcRenderer.on('SET_STATE', callback),
-    mouseMove: ({ clientX, clientY, clientWidth, clientHeight }: { clientX: number, clientY: number, clientWidth: number, clientHeight: number }) => ipcRenderer.send('mouse_move', { clientX, clientY, clientWidth, clientHeight }),
-    mouseClick: (button: string) => ipcRenderer.send('mouse_click', button),
-    mouseScroll: ({ deltaX, deltaY }: { deltaX: number, deltaY: number }) => ipcRenderer.send('mouse_scroll', { deltaX, deltaY }),
-    mouseDrag: ({ direction, clientX, clientY, clientWidth, clientHeight }: { direction: string, clientX: number, clientY: number, clientWidth: number, clientHeight: number }) => ipcRenderer.send('mouse_drag', { direction, clientX, clientY, clientWidth, clientHeight }),
-    keyPress: (key: string) => ipcRenderer.send('key_press', key)
+    init: () => ipcRenderer.send(IPCRoute.DEVICE_INITIATED),
   },
   quiz: {
     play: (quizId: string) => ipcRenderer.send(IPCRoute.QUIZ_PLAY, quizId),
     getQuizId: (callback: (event: IpcRendererEvent, quizId: string) => void) => ipcRenderer.on(IPCRoute.QUIZ_GET_QUIZ_ID, callback),
+  },
+  store: {
+    get: (key: string) => ipcRenderer.invoke(IPCRoute.STORE_GET, key),
+    set: (key: string, value: string) => ipcRenderer.invoke(IPCRoute.STORE_SET, key, value),
+    delete: (key: string) => ipcRenderer.invoke(IPCRoute.STORE_DELETE, key),
+    clear: () => ipcRenderer.invoke(IPCRoute.STORE_CLEAR),
+    has: (key: string) => ipcRenderer.invoke(IPCRoute.STORE_HAS, key),
   }
 };

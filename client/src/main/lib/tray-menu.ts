@@ -57,6 +57,9 @@ const menuTemplate: MenuItemConstructorOptions[] = [
 ]
 
 export const createTray = (iconPath: string) => {
+  if (tray) {
+    return;
+  }
   const menu = Menu.buildFromTemplate(menuTemplate);
   tray = new Tray(iconPath);
   tray.on("click", () => {

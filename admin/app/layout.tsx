@@ -1,3 +1,4 @@
+import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { SessionProvider } from 'next-auth/react'
@@ -5,8 +6,7 @@ import { auth } from '@/auth'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { ModalProvider } from '@/providers/modal-provider'
 import { ToasterProvider } from '@/providers/toast-provider'
-
-import './globals.css'
+import { SocketProvider } from '@/providers/socket-provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -27,6 +27,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+
   const session = await auth();
 
   return (
@@ -36,9 +37,9 @@ export default async function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
             <ToasterProvider />
             <ModalProvider />
-
-            {children}
-
+            <SocketProvider>
+              {children}
+            </SocketProvider>
           </ThemeProvider>
         </body>
       </html >

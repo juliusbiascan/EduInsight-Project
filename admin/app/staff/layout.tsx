@@ -19,6 +19,7 @@ import { Menu, Rainbow } from "lucide-react";
 import { Labaratory } from '@prisma/client';
 import Sidebar from "./components/sidebar";
 import { BeakerIcon } from '@heroicons/react/24/solid'
+import { useSocket } from '@/providers/socket-provider';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -32,6 +33,7 @@ export default function DashboardLayout({ children, params }: DashboardLayoutPro
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [lab, setLab] = useState<Labaratory | null>(null);
+  const { socket, isConnected } = useSocket();
 
   useRouteChange(() => setIsMobileNavOpen(false));
 
@@ -93,6 +95,10 @@ export default function DashboardLayout({ children, params }: DashboardLayoutPro
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm font-medium">{isConnected ? 'Connected' : 'Disconnected'}</span>
+              </div>
               <ThemeToggle />
               <UserButton />
             </div>

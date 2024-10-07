@@ -7,6 +7,9 @@ export function createSocketConnection(): Socket {
     socketInstance = io("https://192.168.1.82:4000", {
       rejectUnauthorized: false,
       transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
     });
   }
   return socketInstance;
@@ -24,5 +27,13 @@ export function disconnectSocket(): void {
   if (socketInstance) {
     socketInstance.disconnect();
     socketInstance = null;
+  }
+}
+
+export function reconnectSocket(): void {
+  if (socketInstance && !socketInstance.connected) {
+    socketInstance.connect();
+  } else if (!socketInstance) {
+    createSocketConnection();
   }
 }

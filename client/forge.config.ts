@@ -45,6 +45,14 @@ const config: ForgeConfig = {
           },
           {
             html: './src/renderer/assets/index.html',
+            js: './src/renderer/windows/welcome.tsx',
+            name: 'welcome_window',
+            preload: {
+              js: './src/renderer/lib/preload.ts',
+            },
+          },
+          {
+            html: './src/renderer/assets/index.html',
             js: './src/renderer/windows/down.tsx',
             name: 'down_window',
             preload: {

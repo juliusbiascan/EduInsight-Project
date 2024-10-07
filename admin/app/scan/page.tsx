@@ -19,10 +19,12 @@ import { getDeviceUserById, getDeviceUserBySchoolId } from "@/data/user"
 import toast from "react-hot-toast"
 import { useRouter } from "next/navigation"
 import { ScannerModal } from "@/components/modals/scanner-modal"
-import { useState, useTransition } from "react"
+import { useCallback, useEffect, useState, useTransition } from "react"
 import { getDeviceById } from "@/data/device"
 import { ClockInSchema } from "@/schemas"
 import { clockIn } from "@/actions/clock-in"
+import React from "react"
+import { io, Socket } from "socket.io-client"
 
 const formSchema = z.object({
   studId: z.string().min(2, {
@@ -38,6 +40,44 @@ export default function ProfileForm() {
   const [error, setError] = useState<string | undefined>("");
   const [success, setSuccess] = useState<string | undefined>("");
   const [isPending, startTransition] = useTransition();
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [serverStatus, setServerStatus] = useState<'online' | 'offline'>('offline');
+
+  useEffect(() => {
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000', {
+      transports: ['websocket'],
+      rejectUnauthorized: false
+    });
+    setSocket(newSocket);
+
+    newSocket.on("connect", () => {
+      console.log("Connected to server");
+      setIsConnected(true);
+      setServerStatus('online');
+    });
+
+    newSocket.on("connect_error", (err) => {
+      console.error("Connection error:", err);
+      setIsConnected(false);
+      setServerStatus('offline');
+    });
+
+    newSocket.on("disconnect", () => {
+      setIsConnected(false);
+      setServerStatus('offline');
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
+  const emitEvent = useCallback((eventName: string, data: any) => {
+    if (socket) {
+      socket.emit(eventName, { ...data });
+    }
+  }, [socket]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -67,6 +107,10 @@ export default function ProfileForm() {
     setError("");
     setSuccess("");
 
+    if (socket) {
+      socket.emit("join-server", devId);
+    }
+
     startTransition(async () => {
       try {
         const device = await getDeviceById(devId)
@@ -80,8 +124,19 @@ export default function ProfileForm() {
           deviceId: device.id,
         }
 
-        clockIn(val)
+        if (socket) clockIn(val)
           .then((data) => {
+            if (data && 'state' in data) {
+              if (data.state === 'login') {
+                const deviceId = data.deviceId;
+                const userId = data.userId;
+                emitEvent('login-user', { deviceId: deviceId, userId: userId });
+              } else if (data.state === 'logout') {
+                const deviceId = data.deviceId;
+                const userId = data.userId;
+                emitEvent('logout-user', { deviceId: deviceId, userId: userId });
+              }
+            }
             router.refresh();
           });
       } catch (error) {
@@ -119,6 +174,17 @@ export default function ProfileForm() {
               </FormItem>
             )}
           />
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm font-medium">{isConnected ? 'Connected' : 'Disconnected'}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className={`w-3 h-3 rounded-full ${serverStatus === 'online' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm font-medium">Server: {serverStatus}</span>
+            </div>
+          </div>
+
           <Button type="submit">Go</Button>
         </form>
       </Form>

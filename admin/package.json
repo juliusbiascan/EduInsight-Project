@@ -10,10 +10,7 @@
     "lint": "next lint",
     "resetdb": "cross-env NODE_ENV=test npx prisma db push --force-reset && npx prisma db seed",
     "postinstall": "prisma generate",
-    "docker:dev": "npm run dev",
-    "docker:compose:dev": "docker-compose down && docker compose up -d --build",
-    "docker:compose:prod": "docker-compose down && docker compose -f docker-compose.prod.yml up -d --build",
-    "docker:compose:db": "docker-compose down && docker compose -f docker-compose.dbonly.yml up -d --build"
+    "docker:dev": "npm run dev"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^1.6.0",
@@ -71,7 +68,8 @@
     "recharts": "^2.12.7",
     "recordrtc": "^5.6.2",
     "sharp": "^0.33.5",
-    "socket.io-client": "^4.7.5",
+    "socket.io": "^4.8.0",
+    "socket.io-client": "^4.8.0",
     "sonner": "^1.3.1",
     "tailwind-merge": "^2.2.0",
     "tailwindcss-animate": "^1.0.7",
@@ -90,6 +88,7 @@
     "@types/uuid": "^9.0.7",
     "@types/ws": "^8.5.10",
     "autoprefixer": "^10.0.1",
+    "cross-env": "^7.0.3",
     "eslint": "^8",
     "eslint-config-next": "^14.2.12",
     "postcss": "^8",

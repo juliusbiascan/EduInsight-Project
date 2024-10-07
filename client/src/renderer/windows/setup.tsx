@@ -3,7 +3,7 @@ import logo from '../assets/smnhs_logo.png';
 import ReactDOM from 'react-dom/client';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '../components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../components/ui/form';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -14,10 +14,14 @@ import { Labaratory } from '@prisma/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
 import { Toaster } from '../components/ui/toaster';
-import { useToast } from '../hooks/use-toast';
 import { sleep } from '@/shared/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Progress } from '../components/ui/progress';
 
 const formSchema = z.object({
+  hostName: z.string().min(1, {
+    message: "Host name is required.",
+  }),
   deviceName: z.string().min(1, {
     message: "Device name is required.",
   }),
@@ -29,14 +33,34 @@ const formSchema = z.object({
   }),
 })
 
+/**
+ * Database status messages.
+ *
+ * @enum
+ */
+enum VerificationStatus {
+  Verifying = 'Verifying hostname...',
+  FetchingLabs = 'Fetching labs...',
+  FetchingNetworkNames = 'Fetching network names...',
+  Verified = 'Verification successful.',
+  VerificationFailed = 'Verification failed.',
+}
+enum SetupStatus {
+  Setup = 'Setting up device...',
+  SetupFailed = 'Setup failed.',
+  SetupSuccessful = 'Setup successful.',
+}
+
 function Index() {
+  const [status, setStatus] = useState<VerificationStatus | SetupStatus | null>(null);
+  const [progress, setProgress] = useState(0);
   const [labs, setLabs] = useState<Labaratory[]>([]);
   const [networkNames, setNetworkNames] = useState<string[]>([]);
-  const { toast } = useToast();
-
+  const [devId, setDevId] = useState<string | null>(null);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      hostName: "",
       deviceName: "",
       labId: "",
       networkName: "",
@@ -44,32 +68,89 @@ function Index() {
   })
 
   useEffect(() => {
-    api.database.getLabs().then(setLabs);
-    api.database.getNetworkNames().then(setNetworkNames);
+    const fetch = async () => {
+      const deviceId = await api.store.get('deviceId') as string;
+      setDevId(deviceId);
+      if (deviceId) {
+        api.window.open(WindowIdentifier.Splash);
+        api.window.close(WindowIdentifier.Setup);
+      }
+    }
+    fetch();
   }, []);
 
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (status) {
+      timer = setInterval(() => {
+        setProgress((oldProgress) => {
+          if (oldProgress === 100) {
+            clearInterval(timer);
+            return 100;
+          }
+          return Math.min(oldProgress + 10, 100);
+        });
+      }, 200);
+    }
+    return () => clearInterval(timer);
+  }, [status]);
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+
+  const handleConnect = async () => {
+    const hostName = form.getValues("hostName");
+    if (!hostName) {
+      setStatus(VerificationStatus.VerificationFailed);
+      return;
+    }
+
+    async function fetchLab() {
+      const labs = await api.database.getLabs();
+      setLabs(labs);
+    }
+
+    async function fetchNetworkNames() {
+      const networkNames = await api.database.getNetworkNames();
+      setNetworkNames(networkNames);
+    }
+
+    setProgress(0);
+    setStatus(VerificationStatus.Verifying);
+    await sleep(2000);
+
     try {
-      console.log("Device Name:", values.deviceName);
-      console.log("Selected Lab ID:", values.labId);
-      console.log("Selected Network Name:", values.networkName);
+      await api.database.verifyHostName(hostName);
+      await api.database.connect();
 
-      api.database.registerDevice(values.deviceName, values.labId, values.networkName)
-      toast({
-        title: "Setup Successful",
-        description: "Your device has been setup successfully.",
-      });
-      sleep(1000).then(() => {
+      setStatus(VerificationStatus.FetchingLabs);
+      await fetchLab();
+      await sleep(2000);
+
+      setStatus(VerificationStatus.FetchingNetworkNames);
+      await fetchNetworkNames();
+
+      setStatus(VerificationStatus.Verified);
+    } catch (error) {
+      setStatus(VerificationStatus.VerificationFailed);
+      setLabs([]);
+      setNetworkNames([]);
+    }
+  }
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    setStatus(SetupStatus.Setup);
+    setProgress(0);
+    try {
+      api.database.registerDevice(values.deviceName, values.labId, values.networkName).then(() => {
+        return sleep(1000);
+      }).then(() => {
+        api.window.open(WindowIdentifier.Splash);
         api.window.close(WindowIdentifier.Setup);
-      })
+        setStatus(SetupStatus.SetupSuccessful);
+        return Promise.resolve();
+      });
     } catch (error) {
       console.error("Setup failed:", error);
-      toast({
-        title: "Setup Failed",
-        description: "There was an error setting up your device. Please try again.",
-        variant: "destructive",
-      });
+      setStatus(SetupStatus.SetupFailed);
     }
   }
 
@@ -77,104 +158,105 @@ function Index() {
     api.window.close(WindowIdentifier.Setup);
   };
 
-  if (labs.length === 0) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gray-100">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="text-center">
-            <img src={logo} alt="Logo" className="h-20 mx-auto mb-4" />
-            <CardTitle className="text-2xl font-bold text-gray-800">No Labs Found</CardTitle>
-            <CardDescription className="text-gray-600">
-              You need to set up a lab before you can proceed.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={handleExit} className="w-full bg-red-500 hover:bg-red-600 text-white">
-              Exit
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center space-y-2 pb-6">
-          <img src={logo} alt="Logo" className="h-20 mx-auto" />
-          <CardTitle className="text-2xl font-bold text-gray-800">Device Setup</CardTitle>
-          <CardDescription className="text-gray-600">
-            Configure your device settings below
+    <div className="min-h-screen flex items-center justify-center p-4 overflow-hidden">
+      <Card className="w-full max-w-md shadow-2xl bg-white rounded-3xl overflow-hidden">
+        <CardHeader className="text-center space-y-4 pb-8 bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+          <img src={logo} alt="Logo" className="h-24 mx-auto rounded-full border-4 border-white shadow-lg" />
+          <CardTitle className="text-3xl font-bold">Device Setup</CardTitle>
+          <CardDescription className="text-lg text-blue-100">
+            Let's get your device ready!
+            {devId}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-8">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="deviceName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Device Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter device name" {...field} className="bg-white" />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="labId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Lab</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <div className='flex space-x-2'>
+                <FormField
+                  control={form.control}
+                  name="hostName"
+                  render={({ field }) => (
+                    <FormItem className="flex-grow">
+                      <FormLabel className="text-sm font-medium text-gray-700">Hostname</FormLabel>
                       <FormControl>
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder="Select a lab" />
-                        </SelectTrigger>
+                        <Input placeholder="Enter host name" {...field} className="bg-white border-2 border-blue-200 rounded-lg focus:border-purple-400 transition duration-300" />
                       </FormControl>
-                      <SelectContent>
-                        {labs.map((lab) => (
-                          <SelectItem key={lab.id} value={lab.id}>{lab.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="networkName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Network</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-white">
-                          <SelectValue placeholder="Select a network" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {networkNames.map((name) => (
-                          <SelectItem key={name} value={name}>{name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-              <Separator className="my-6" />
-              <div className="flex flex-col space-y-3">
-                <Button type="submit" className="bg-blue-500 hover:bg-blue-600 text-white">
-                  Setup Device
+                      <FormMessage className="text-xs text-red-500" />
+                    </FormItem>
+                  )}
+                />
+                <Button onClick={handleConnect} className="bg-blue-500 hover:bg-blue-600 text-white self-end rounded-lg transition duration-300 transform hover:scale-105">
+                  Connect
                 </Button>
+              </div>
+              {labs.length > 0 && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="deviceName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">Device Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Device name" {...field} className="bg-white border-2 border-blue-200 rounded-lg focus:border-purple-400 transition duration-300" />
+                        </FormControl>
+                        <FormMessage className="text-xs text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="labId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">Lab</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-2 border-blue-200 rounded-lg focus:border-purple-400 transition duration-300">
+                              <SelectValue placeholder="Select a lab" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {labs.map((lab) => (
+                              <SelectItem key={lab.id} value={lab.id}>{lab.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-xs text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="networkName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">Network</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-2 border-blue-200 rounded-lg focus:border-purple-400 transition duration-300">
+                              <SelectValue placeholder="Select a network" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {networkNames.map((name) => (
+                              <SelectItem key={name} value={name}>{name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-xs text-red-500" />
+                      </FormItem>
+                    )}
+                  />
+                  <Separator className="my-6 bg-blue-200" />
+                </>)}
+              <div className="flex flex-col space-y-3">
+                {labs.length > 0 && <Button type="submit" className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition duration-300 transform hover:scale-105">
+                  Setup Device
+                </Button>}
                 <Button type="button" variant="outline" onClick={handleExit}
-                  className="border-red-500 text-red-500 hover:bg-red-50">
+                  className="border-2 border-red-500 text-red-500 hover:bg-red-50 rounded-lg transition duration-300">
                   Exit
                 </Button>
               </div>
@@ -182,6 +264,21 @@ function Index() {
           </Form>
         </CardContent>
       </Card>
+      <Dialog open={!!status} onOpenChange={() => setStatus(null)}>
+        <DialogContent className="sm:max-w-[425px] bg-white rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-blue-600">{status}</DialogTitle>
+          </DialogHeader>
+          <div className="py-6">
+            <Progress value={progress} className="w-full h-2 bg-blue-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500 ease-in-out"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </Progress>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Toaster />
     </div>
   );

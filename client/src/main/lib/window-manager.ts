@@ -1,71 +1,6 @@
 import { BrowserWindow } from "electron";
-import url from "url";
-import path from "path";
 import { WindowIdentifier } from '../../shared/constants';
-
-export const createWelcomeWindow = (firstName: string, lastName: string) => {
-  let welcomeWindow = new BrowserWindow({
-    width: 500,
-    height: 600,
-    show: false,
-    frame: false,
-    resizable: false,
-    alwaysOnTop: true,
-    transparent: true,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
-    }
-  });
-
-  welcomeWindow.loadURL(url.format({
-    pathname: path.join(__dirname, 'html/welcome.html'),
-    protocol: 'file:',
-    slashes: true
-  }));
-
-  welcomeWindow.webContents.on('did-finish-load', () => {
-    welcomeWindow.webContents.send('user-info', { firstName, lastName });
-    welcomeWindow.show();
-    welcomeWindow.setOpacity(0);
-    fadeIn();
-  });
-
-  function fadeIn() {
-    let opacity = 0;
-    const fadeInterval = setInterval(() => {
-      if (opacity < 1) {
-        opacity += 0.1;
-        welcomeWindow.setOpacity(opacity);
-      } else {
-        clearInterval(fadeInterval);
-      }
-    }, 50);
-  }
-
-  function fadeOut(callback: () => void) {
-    let opacity = 1;
-    const fadeInterval = setInterval(() => {
-      if (opacity > 0) {
-        opacity -= 0.1;
-        welcomeWindow.setOpacity(opacity);
-      } else {
-        clearInterval(fadeInterval);
-        callback();
-      }
-    }, 50);
-  }
-
-  setTimeout(() => {
-    if (welcomeWindow) {
-      fadeOut(() => {
-        welcomeWindow.close();
-        welcomeWindow = null;
-      });
-    }
-  }, 4000);
-}
-
+import { screen } from 'electron';
 
 /**
  * @interface
@@ -85,7 +20,6 @@ interface WindowConfig {
 const kioskWindowConfig: Electron.BrowserWindowConstructorOptions = {
   kiosk: true,
   focusable: true,
-  // closable: false,
   fullscreen: true,
   show: true,
   frame: false,
@@ -108,7 +42,6 @@ const kioskWindowConfig: Electron.BrowserWindowConstructorOptions = {
  * @constant
  */
 const baseWindowConfig: Electron.BrowserWindowConstructorOptions = {
-  backgroundColor: 'whitesmoke',
   webPreferences: {
     preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
   },
@@ -146,6 +79,26 @@ const windows: Record<string, Electron.BrowserWindow> = {};
  * @constant
  */
 const WINDOW_CONFIGS: Record<string, WindowConfig> = {
+
+  [WindowIdentifier.Welcome]: {
+    id: WindowIdentifier.Welcome,
+    url: WELCOME_WINDOW_WEBPACK_ENTRY,
+    options: {
+      ...baseWindowConfig,
+      width: 500,
+      height: 100,
+      show: false,
+      frame: false,
+      resizable: false,
+      alwaysOnTop: true,
+      transparent: true,
+      skipTaskbar: true,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false
+      }
+    },
+  },
   [WindowIdentifier.Main]: {
     id: WindowIdentifier.Main,
     url: MAIN_WINDOW_WEBPACK_ENTRY,
@@ -171,11 +124,12 @@ const WINDOW_CONFIGS: Record<string, WindowConfig> = {
     id: WindowIdentifier.Setup,
     url: SETUP_WINDOW_WEBPACK_ENTRY,
     options: {
-      ...sharedWindowConfigs.frameless,
-      height: 600,
-      width: 500,
+      ...baseWindowConfig,
+      frame: false,
       transparent: true,
-      backgroundColor: '#00000000',
+      resizable: false,
+      minimizable: true,
+      maximizable: false,
     },
   },
   [WindowIdentifier.Splash]: {
@@ -265,8 +219,6 @@ function create(id: string, url: string, options: Electron.BrowserWindowConstruc
     return windows[id];
   }
 
-
-
   // create the browser window
   const window = new BrowserWindow(options);
 
@@ -288,6 +240,55 @@ function create(id: string, url: string, options: Electron.BrowserWindowConstruc
     });
   }
 
+  if (id === WindowIdentifier.Welcome) {
+    window.webContents.on('did-finish-load', () => {
+      const windowBounds = window.getBounds();
+      const workAreaSize = screen.getPrimaryDisplay().workAreaSize;
+
+      // Position window in the bottom-right corner of the screen
+      const x = workAreaSize.width - windowBounds.width - 20;
+      const y = workAreaSize.height - windowBounds.height - 20;
+
+      window.setPosition(x, y, false);
+      window.show();
+      window.focus();
+      window.setOpacity(0);
+      fadeIn();
+    });
+
+    function fadeIn() {
+      let opacity = 0;
+      const fadeInterval = setInterval(() => {
+        if (opacity < 1) {
+          opacity += 0.1;
+          window.setOpacity(opacity);
+        } else {
+          clearInterval(fadeInterval);
+        }
+      }, 50);
+    }
+
+    function fadeOut(callback: () => void) {
+      let opacity = 1;
+      const fadeInterval = setInterval(() => {
+        if (opacity > 0) {
+          opacity -= 0.1;
+          window.setOpacity(opacity);
+        } else {
+          clearInterval(fadeInterval);
+          callback();
+        }
+      }, 50);
+    }
+
+    setTimeout(() => {
+      if (window) {
+        fadeOut(() => {
+          window.close();
+        });
+      }
+    }, 5000); // Increased display time to 5 seconds
+  }
   // de-reference the window object when its closed
   window.on('closed', () => delete windows[id]);
 

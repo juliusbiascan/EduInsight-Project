@@ -20,7 +20,7 @@
     "sourceMap": true,
     "target": "ES6"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "db.ts"],
   "ts-node": {
     "compilerOptions": {
       "module": "CommonJS"

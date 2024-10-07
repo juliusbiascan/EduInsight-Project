@@ -13,6 +13,8 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { DeviceArtwork } from "./device_artwork";
 import toast from "react-hot-toast";
 import { ActiveDeviceUser, Device } from "@prisma/client";
+import { motion, AnimatePresence } from 'framer-motion';
+import { useSocket } from '@/providers/socket-provider';
 
 interface MonitoringClientProps {
   labId: string | null;
@@ -21,6 +23,7 @@ interface MonitoringClientProps {
 export const MonitoringClient: React.FC<MonitoringClientProps> = ({ labId }) => {
   const [allActiveDevice, setAllActiveDevice] = useState<ActiveDeviceUser[]>([]);
   const [allInactiveDevice, setAllInactiveDevice] = useState<Device[]>([]);
+  const { socket } = useSocket();
 
   const refresh = useCallback(async () => {
     if (labId) {
@@ -34,15 +37,51 @@ export const MonitoringClient: React.FC<MonitoringClientProps> = ({ labId }) => 
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+
+    if (!socket) return;
+
+    socket.on("refresh", () => {
+      refresh();
+    });
+
+    return () => {
+      socket.off("refresh");
+    };
+
+  }, [refresh, socket]);
 
   const handleLogoutAll = () => {
     allActiveDevice.forEach((activeDevice) => {
       logoutUser(activeDevice.userId, activeDevice.deviceId).then(() => {
         toast.success("All devices have been logged out successfully");
-        refresh();
+        if (socket) {
+          socket.emit("logout-user", { deviceId: activeDevice.deviceId, userId: activeDevice.userId });
+        }
       });
     });
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 300,
+        damping: 24
+      }
+    }
   };
 
   return (
@@ -57,7 +96,8 @@ export const MonitoringClient: React.FC<MonitoringClientProps> = ({ labId }) => 
             size="sm"
             variant="destructive"
             onClick={handleLogoutAll}
-            className="bg-gradient-to-r from-pink-400 to-blue-400 hover:from-pink-500 hover:to-blue-500 dark:from-pink-500 dark:to-blue-500 dark:hover:from-pink-600 dark:hover:to-blue-600"
+            disabled={allActiveDevice.length === 0}
+            className="bg-gradient-to-r from-pink-400 to-blue-400 hover:from-pink-500 hover:to-blue-500 dark:from-pink-500 dark:to-blue-500 dark:hover:from-pink-600 dark:hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <LogOut className="h-4 w-4 mr-1" />
             Logout All
@@ -65,24 +105,35 @@ export const MonitoringClient: React.FC<MonitoringClientProps> = ({ labId }) => 
         </div>
       </div>
 
-      <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
-        <StatsCard
-          title="Active Devices"
-          value={allActiveDevice.length}
-          icon={<Activity className="h-4 w-4" />}
-        />
-        <StatsCard
-          title="Inactive Devices"
-          value={allInactiveDevice.length}
-          icon={<Laptop className="h-4 w-4" />}
-        />
-        <StatsCard
-          title="Total Devices"
-          value={allActiveDevice.length + allInactiveDevice.length}
-          icon={<Users className="h-4 w-4" />}
-        />
+      <motion.div
+        className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={itemVariants}>
+          <StatsCard
+            title="Active Devices"
+            value={allActiveDevice.length}
+            icon={<Activity className="h-4 w-4" />}
+          />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <StatsCard
+            title="Inactive Devices"
+            value={allInactiveDevice.length}
+            icon={<Laptop className="h-4 w-4" />}
+          />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <StatsCard
+            title="Total Devices"
+            value={allActiveDevice.length + allInactiveDevice.length}
+            icon={<Users className="h-4 w-4" />}
+          />
+        </motion.div>
         {/* Add more stats cards as needed */}
-      </div>
+      </motion.div>
 
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList className="justify-start bg-white dark:bg-gray-800 rounded-full p-1 shadow-sm">
@@ -98,27 +149,39 @@ export const MonitoringClient: React.FC<MonitoringClientProps> = ({ labId }) => 
             </CardHeader>
             <CardContent className="p-2">
               <ScrollArea>
-                <div className="flex space-x-4 pb-4">
-                  {allActiveDevice.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center w-full py-8">
-                      <Frown className="h-16 w-16 text-pink-300 dark:text-pink-600 mb-4" />
-                      <p className="text-lg font-semibold text-gray-600 dark:text-gray-300">No Active Devices</p>
-                      <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">It&apos;s quiet here... too quiet.</p>
-                    </div>
-                  ) : (
-                    allActiveDevice.map((device) => (
-                      <DeviceArtwork
-                        key={device.id}
-                        activeDevice={device}
-                        className="w-[250px]"
-                        aspectRatio="portrait"
-                        width={250}
-                        height={330}
-                        onChanged={refresh}
-                      />
-                    ))
-                  )}
-                </div>
+                <motion.div
+                  className="flex space-x-4 pb-4"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <AnimatePresence>
+                    {allActiveDevice.length === 0 ? (
+                      <motion.div
+                        className="flex flex-col items-center justify-center w-full py-8"
+                        variants={itemVariants}
+                        key="no-active-devices"
+                      >
+                        <Frown className="h-16 w-16 text-pink-300 dark:text-pink-600 mb-4" />
+                        <p className="text-lg font-semibold text-gray-600 dark:text-gray-300">No Active Devices</p>
+                        <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">It&apos;s quiet here... too quiet.</p>
+                      </motion.div>
+                    ) : (
+                      allActiveDevice.map((device) => (
+                        <motion.div key={device.id} variants={itemVariants}>
+                          <DeviceArtwork
+                            activeDevice={device}
+                            className="w-[250px]"
+                            aspectRatio="portrait"
+                            width={250}
+                            height={330}
+                            onChanged={refresh}
+                          />
+                        </motion.div>
+                      ))
+                    )}
+                  </AnimatePresence>
+                </motion.div>
                 <ScrollBar orientation="horizontal" />
               </ScrollArea>
             </CardContent>

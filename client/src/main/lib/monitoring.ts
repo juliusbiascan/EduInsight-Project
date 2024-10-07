@@ -1,6 +1,6 @@
 import { activeWindow, Result } from 'get-windows';
-import { db } from '@/shared/db';
 import { powerMonitor } from "electron";
+import { Database } from '.';
 
 let interval: NodeJS.Timeout;
 
@@ -17,7 +17,7 @@ function getTimeStamp() {
 }
 
 async function pushPowerLogsToDB(pm_status: string, pm_log_ts: string, userId: string, deviceId: string, labId: string) {
-  await db.powerMonitoringLogs.create({
+  await Database.prisma.powerMonitoringLogs.create({
     data: {
       pm_status,
       pm_log_ts,
@@ -40,7 +40,7 @@ export function setPowerMonitor(userId: string, deviceId: string, labId: string)
 
       if (currentWindow !== newWindow) {
 
-        await db.activityLogs.create({
+        await Database.prisma.activityLogs.create({
 
           data: {
             userId,

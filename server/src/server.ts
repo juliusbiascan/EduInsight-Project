@@ -61,8 +61,20 @@ interface IScreenShare {
     screenData: string
 }
 
+interface ILoginUser {
+    deviceId: string,
+    userId: string
+}
+
+interface ILogoutUser {
+    deviceId: string,
+    userId: string
+}
+
 io.on("connection", (socket) => {
+
     console.log("a user connected");
+
     const joinServer = (deviceId: string) => {
         socket.join(deviceId)
     };
@@ -99,6 +111,18 @@ io.on("connection", (socket) => {
         socket.to(deviceId).emit('screen-share', { deviceId, screenData });
     }
 
+    const loginUser = ({ deviceId, userId }: ILoginUser) => {
+        console.log("login-user");
+        socket.to(deviceId).emit('login-user', deviceId, userId);
+        socket.broadcast.emit('refresh');
+    }
+
+    const logoutUser = ({ deviceId, userId }: ILogoutUser) => {
+        console.log("logout-user");
+        socket.to(deviceId).emit('logout-user', deviceId, userId);
+        socket.broadcast.emit('refresh');
+    }
+
     socket.on("join-server", joinServer)
     socket.on("mouse-move", mouseMove)
     socket.on("mouse-click", mouseClick)
@@ -108,6 +132,8 @@ io.on("connection", (socket) => {
     socket.on("start-sharing", startSharing)
     socket.on("stop-sharing", stopSharing)
     socket.on("screen-share", screenShare)
+    socket.on("login-user", loginUser)
+    socket.on("logout-user", logoutUser)
 
     socket.on("disconnect", () => {
         console.log("user disconnected");

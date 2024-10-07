@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getDeviceById } from "@/data/device";
-import RemoteClient from "./components/remote-client";
 import { VncClient } from "./components/vnc-client";
 
 const Monitoring = async ({

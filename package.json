@@ -4,7 +4,10 @@
   "description": " Computer Lab Monitoring System for Enhanced Learning in San Miguel National Highschool",
   "scripts": {
     "client": "cd client && npm start",
-    "server": "cd server && npm run dev"
+    "server": "cd server && npm run dev",
+    "docker:compose:dev": "docker-compose down && docker compose up -d --build",
+    "docker:compose:prod": "docker-compose down && docker compose -f docker-compose.prod.yml up -d --build",
+    "docker:compose:db": "docker-compose down && docker compose -f docker-compose.dbonly.yml up -d --build"
   },
   "repository": {
     "type": "git",

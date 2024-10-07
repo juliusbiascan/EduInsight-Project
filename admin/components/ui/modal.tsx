@@ -33,17 +33,19 @@ export const Modal: React.FC<ModalProps> = ({
       <DialogContent className={`
         sm:max-w-[425px] 
         ${theme === 'dark' 
-          ? 'bg-gradient-to-br from-purple-900 to-indigo-900 text-white' 
-          : 'bg-gradient-to-br from-pink-100 to-purple-100 text-gray-800'
+          ? 'bg-gradient-to-br from-gray-900 to-gray-800' 
+          : 'bg-gradient-to-br from-pink-50 to-blue-50' 
         } 
         rounded-lg shadow-lg 
         transition-all duration-300 ease-in-out
         transform hover:scale-105
       `}>
-        <DialogHeader className="space-y-3">
-          <DialogTitle className="text-2xl font-bold 
-            ${theme === 'dark' ? 'text-purple-300' : 'text-purple-800'}
-          ">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className={`
+            text-2xl font-bold bg-clip-text text-transparent
+            bg-gradient-to-r from-pink-500 to-blue-500
+            dark:from-pink-400 dark:to-blue-400
+          `}>
             {title}
           </DialogTitle>
           <DialogDescription className={`

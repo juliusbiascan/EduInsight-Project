@@ -1,110 +1,104 @@
 /**
  * @file index.ts
  * @description Main entry point for the EduInsight Client application.
- * This file sets up the Electron app, handles window management, user sessions, and various system events.
+ * This file sets up the Electron app, handles window management, user sessions,
+ * socket connections, screen sharing, remote control, and various system events.
  */
 
 import AutoLaunch from 'auto-launch';
-import { app, BrowserWindow, desktopCapturer, screen } from 'electron';
+import { app, BrowserWindow, desktopCapturer, ipcMain, screen } from 'electron';
 import { createTray, removeTray } from './lib/tray-menu';
-import { createWelcomeWindow } from './lib/window-manager';
 import path from 'path';
-import { machineIdSync } from 'node-machine-id';
-import { db } from '../shared/db';
-import { Device, DeviceUser, Prisma } from '@prisma/client';
 import { WindowManager } from './lib';
 import * as IPCHandlers from './handlers';
 import is from 'electron-is';
 import { createSocketConnection, getSocketInstance, isSocketConnected } from './lib/socket-manager';
+import { Socket } from 'socket.io-client';
 import * as robot from "@jitsi/robotjs";
-import { Socket } from "socket.io-client";
+import { IPCRoute } from '@/shared/constants';
+import Store from 'electron-store';
+
+const store = new Store();
 
 /**
  * Handles the 'ready' event of the app.
- * Sets up IPC handlers and creates the system tray icon.
+ * Sets up IPC handlers, initializes the renderer store, creates a socket connection,
+ * and sets up socket event listeners if not already connected.
  */
 function handleOnReady() {
   // register all ipc handlers before creating the app window
   Object.values(IPCHandlers).forEach((handler) => handler());
 
-  // Create socket connection using the Singleton
-  createSocketConnection();
+  // initialize the renderer store
+  Store.initRenderer();
+
+  WindowManager.get(WindowManager.WINDOW_CONFIGS.setup_window.id)
+
+  ipcMain.on(IPCRoute.DEVICE_INITIATED, e => {
+    console.log("Device initiated");
+    // Create socket connection using the Singleton
+    createSocketConnection();
+
+    // Get the socket instance
+    const socket = getSocketInstance();
+
+    // Only set up socket event listeners if the socket is not already connected
+    if (!isSocketConnected()) {
+      const deviceId = store.get('deviceId') as string;
+      setupSocketEventListeners(socket, deviceId);
+    }
+  })
 }
 
 /**
  * Handles the scenario when no device is found in the database.
- * Opens the splash window.
+ * Opens the splash window to guide the user through device registration.
  */
-let setUpDevice: boolean = false;
+
 function handleNoDeviceFound() {
-  if (!setUpDevice) {
-    setUpDevice = true;
-    WindowManager.get(WindowManager.WINDOW_CONFIGS.splash_window.id);
-  }
+  WindowManager.get(WindowManager.WINDOW_CONFIGS.splash_window.id);
 }
 
 /**
- * Handles unexpected errors.
- * Opens the "Something Went Wrong" window.
+ * Handles unexpected errors in the application.
+ * Logs the error and could potentially show an error window to the user.
  * @param {any} error - The error that occurred.
  */
 function handleSomethingWentWrong(error: any) {
-
+  console.log('Something went wrong', error);
 }
 
 /**
- * Handles the scenario when the server is down.
- * Opens the "Server Down" window.
+ * Handles the scenario when the server is down or unreachable.
+ * Logs the issue and could potentially show a "Server Down" window to the user.
  */
 
 function handleServerDown() {
-}
-
-let previousUserId: string | null = null;
-/**
- * Handles the scenario when there's an active user.
- * Starts various services and shows the welcome window.
- * @param {DeviceUser} user - The active user.
- */
-function handleActiveUser(user: DeviceUser, device: Device) {
-  if (!previousUserId || previousUserId !== user.id) {
-    console.log('Active user');
-
-    // Get the socket instance
-    const ws = getSocketInstance();
-
-    // Only set up socket event listeners if the socket is not already connected
-    if (!isSocketConnected()) {
-      setupSocketEventListeners(ws, device.id);
-    }
-
-    createTray(path.join(__dirname, 'img/tray-icon.ico'));
-    createWelcomeWindow(user.firstName, user.lastName);
-
-    WindowManager.get(WindowManager.WINDOW_CONFIGS.main_window.id).close()
-    previousUserId = user.id;
-  }
+  console.log('Server is down');
 }
 
 /**
- * Handles the scenario when there's no active user.
- * Stops various services and shows the main window.
- * @param {string} devId - The device ID.
+ * Handles the scenario when there's an active user logged in.
+ * Sets the user ID in the store, creates the system tray icon,
+ * shows the welcome window, and closes the main window.
+ * @param {string} userId - The ID of the active user.
  */
-function handleNoActiveUser(devId: string) {
-  if (!previousUserId || previousUserId !== devId) {
+function handleActiveUser(userId: string) {
+  store.set('userId', userId);
+  createTray(path.join(__dirname, 'img/tray-icon.ico'));
+  WindowManager.get(WindowManager.WINDOW_CONFIGS.welcome_window.id)
+  WindowManager.get(WindowManager.WINDOW_CONFIGS.main_window.id).close()
+}
 
-    const ws = getSocketInstance();
-    if (ws) {
-      ws.emit("stop-sharing", devId);
-      ws.disconnect();
-    }
-
-    removeTray();
-    console.log('No active user');
-    WindowManager.get(WindowManager.WINDOW_CONFIGS.main_window.id)
-    previousUserId = devId;
-  }
+/**
+ * Handles the scenario when there's no active user (user logged out).
+ * Removes the system tray icon, clears the user ID from the store,
+ * and shows the main login window.
+ */
+function handleNoActiveUser() {
+  removeTray();
+  store.set('userId', null);
+  WindowManager.get(WindowManager.WINDOW_CONFIGS.main_window.id)
 }
 
 /**
@@ -132,6 +126,7 @@ function handleOnActivate() {
  * Sets up auto-launch, event listeners, and runs the main application loop.
  */
 (async () => {
+
   // Handle creating/removing shortcuts on Windows when installing/uninstalling.
   if (require('electron-squirrel-startup')) {
     app.quit();
@@ -148,63 +143,15 @@ function handleOnActivate() {
     });
   }
 
-  app.on('ready', () => {
-    handleOnReady();
-    const interval = setInterval(async () => {
-      try {
-        const device = await db.device.findFirst({
-          where: {
-            devMACaddress: machineIdSync(true),
-          }
-        });
+  app.on('ready', handleOnReady);
 
-        if (!device) {
-          handleNoDeviceFound();
-        } else {
-
-          const activeUsers = await db.activeDeviceUser.findFirst({
-            where: {
-              deviceId: device.id,
-            }
-          });
-
-          if (!activeUsers) {
-            handleNoActiveUser(device.id);
-          } else {
-            const user = await db.deviceUser.findUnique({
-              where: {
-                id: activeUsers.userId,
-              }
-            });
-            if (user) {
-              handleActiveUser(user, device);
-            }
-          }
-        }
-      } catch (error) {
-        if (error instanceof Prisma.PrismaClientInitializationError) {
-          handleServerDown();
-        } else {
-          handleSomethingWentWrong(error);
-        }
-
-      }
-    }, 1000);
-  });
-  
   app.on('window-all-closed', async () => {
-    const device = await db.device.findFirst({
-      where: {
-        devMACaddress: machineIdSync(true),
-      }
-    });
-    if (!device) {
+    if (!store.get("deviceId")) {
       handleAllClosed();
     }
   });
 
   app.on('activate', handleOnActivate);
-
 })();
 
 let captureInterval: NodeJS.Timeout | null = null;
@@ -213,7 +160,6 @@ function startScreenCapture(ws: Socket, deviceId: string) {
   if (captureInterval) {
     clearInterval(captureInterval);
   }
-
   captureInterval = setInterval(() => {
     desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1920, height: 1080 } })
       .then(sources => {
@@ -237,7 +183,25 @@ function stopScreenCapture() {
 function setupSocketEventListeners(socket: Socket, deviceId: string) {
 
   socket.on('connect', () => {
-    socket.emit('join-server', deviceId);
+    const deviceId = store.get('deviceId') as string;
+    if (deviceId) {
+      socket.emit('join-server', deviceId);
+      if (store.get('userId')) {
+        handleActiveUser(store.get('userId') as string);
+      } else {
+        handleNoActiveUser();
+      }
+    } else {
+      handleNoDeviceFound();
+    }
+  });
+
+  socket.on('login-user', (userId: string) => {
+    handleActiveUser(userId);
+  });
+
+  socket.on('logout-user', () => {
+    handleNoActiveUser();
   });
 
   socket.on('start_sharing', () => {
@@ -297,9 +261,18 @@ function setupSocketEventListeners(socket: Socket, deviceId: string) {
   // Add error and disconnect handlers
   socket.on('error', (error) => {
     console.error('Socket error:', error);
+    handleSomethingWentWrong(error);
   });
 
   socket.on('disconnect', (reason) => {
     console.log('Disconnected from server:', reason);
+  });
+
+  socket.on('connect-error', (error: any) => {
+    handleSomethingWentWrong(error);
+  });
+
+  socket.on('connect-timeout', (error: any) => {
+    handleServerDown();
   });
 }

@@ -1,0 +1,17 @@
+{
+  "name": "tester",
+  "version": "1.0.0",
+  "main": "test.js",
+  "scripts": {
+    "test": "mocha ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "assert": "^2.1.0",
+    "mocha": "^10.7.3",
+    "socket.io-client": "^4.8.0"
+  }
+}

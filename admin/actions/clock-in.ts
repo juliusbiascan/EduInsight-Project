@@ -4,81 +4,68 @@ import * as z from "zod";
 import { db } from "@/lib/db";
 import { ClockInSchema } from "@/schemas";
 import { State } from "@prisma/client";
-import { create } from "domain";
 
 export const clockIn = async (values: z.infer<typeof ClockInSchema>) => {
+	const { deviceId, userId } = values;
 
-  // const validatedFields = ClockInSchema.safeParse(values);
+	const activeDeviceUser = await db.activeDeviceUser.findFirst({
+		where: { userId }
+	});
 
-  // if (!validatedFields.success) {
-  //   return { error: `Invalid fields!` };
-  // }
-
-  const { deviceId, userId } = values;
-
-
-  const activeDeviceUser = await db.activeDeviceUser.count({
-    where: {
-      userId,
-    }
-  });
-
-  if (activeDeviceUser == 1) {
-
-    await db.activeDeviceUser.deleteMany({
-      where: {
-        userId,
-      }
-    });
-
-    await db.device.updateMany({
-      where: {
-        id: deviceId,
-      },
-      data: {
-        isUsed: false
-      }
-    });
-
-    return { success: "User logout successfully" };
-  }
-
-  const device = await db.device.findUnique({
-    where: {
-      id: deviceId,
-    }
-  })
-
-
-  if (!device) {
-    return { error: "Device already in used!" };
-  }
-
-  const user = await db.activeDeviceUser.create({
-    data: {
-      labId: device.labId,
-      deviceId,
-      userId,
-      state: State.ACTIVE
-    },
-  });
-
-  await db.device.updateMany({
-    where: {
-      id: deviceId,
-    },
-    data: {
-      isUsed: true
-    }
-  });
-
-  await db.activeUserLogs.create({
-    data: {
-      labId: device.labId,
-      userId: user.userId,
-      deviceId: device.id
-    }
-  });
-
-  return { success: "User login successfully" };
+	if (activeDeviceUser) {
+		await logoutUser(activeDeviceUser.deviceId, userId);
+		return { success: "User logged out successfully", deviceId: activeDeviceUser.deviceId, userId: userId, state: 'logout' };
+	} else {
+		await loginUser(deviceId, userId);
+		return { success: "User logged in successfully", deviceId: deviceId, userId: userId, state: 'login' };
+	}
 };
+
+async function loginUser(deviceId: string, userId: string) {
+	const device = await db.device.findUnique({
+		where: { id: deviceId }
+	});
+
+	if (!device) {
+		throw new Error("Device not found");
+	}
+
+	if (device.isUsed) {
+		throw new Error("Device is already in use");
+	}
+
+	await db.$transaction([
+		db.activeDeviceUser.create({
+			data: {
+				labId: device.labId,
+				deviceId,
+				userId,
+				state: State.ACTIVE
+			},
+		}),
+		db.device.update({
+			where: { id: deviceId },
+			data: { isUsed: true }
+		}),
+		db.activeUserLogs.create({
+			data: {
+				labId: device.labId,
+				deviceId,
+				userId
+			}
+		})
+	]);
+
+}
+
+async function logoutUser(deviceId: string, userId: string) {
+	await db.$transaction([
+		db.activeDeviceUser.deleteMany({
+			where: { userId },
+		}),
+		db.device.update({
+			where: { id: deviceId },
+			data: { isUsed: false }
+		})
+	]);
+}
